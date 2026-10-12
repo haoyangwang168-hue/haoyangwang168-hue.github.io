@@ -1,0 +1,60 @@
+.scroll-work-gallery { position: relative; background: transparent; color: #141714; }
+.scroll-work-stage { position: sticky; top: 0; height: 100svh; padding: 88px 24px 24px; overflow: clip; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.scroll-work-stage > header { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 20px; font: 10px monospace; letter-spacing: 1.5px; }
+.scroll-work-title { position: absolute; top: 17%; margin: 0; text-align: center; font: 900 clamp(18px, 3vw, 36px)/1.05 Arial, sans-serif; letter-spacing: -1.5px; pointer-events: none; }
+.scroll-work-deck { position: relative; perspective: 1600px; width: min(380px, 72vw, 50svh); aspect-ratio: 3 / 4; flex: none; margin: auto; }
+.scroll-work-card { position: absolute; inset: 0; border-radius: 10px; transform-origin: center; transform-style: preserve-3d; cursor: pointer; }
+.scroll-work-side { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.scroll-work-card--0 { --card-color: #e5c778; --card-ink: #34362f; }
+.scroll-work-card--1 { --card-color: #eee7d8; --card-ink: #191a17; }
+.scroll-work-card--2 { --card-color: #e4e6dd; --card-ink: #34362f; }
+.scroll-work-card--3 { --card-color: #dedbd1; --card-ink: #34362f; }
+.scroll-work-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding: 24px; border-radius: inherit; background: var(--card-color); color: var(--card-ink); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 14px #2222220c; }
+.scroll-work-back { transform: rotateY(180deg); }
+.scroll-work-eyebrow { font: 8px monospace; letter-spacing: 1.2px; }
+.scroll-work-face h3 { font: 900 clamp(22px, 3vw, 32px)/1.05 Arial, sans-serif; text-align: center; margin: 18px 0; letter-spacing: -1px; }
+.scroll-work-face p { text-align: center; font-size: 12px; line-height: 1.5; margin: 16px 0; }
+.scroll-work-cover { position: relative; width: 100%; flex: 1; min-height: 0; border: 0; border-radius: 4px; background: #ffffff22; padding: 0; overflow: hidden; cursor: pointer; }
+.scroll-work-cover img { display: block; height: 100%; width: 100%; object-fit: contain; transition: transform .2s ease; }
+.scroll-work-open { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 12px; border: 0; border-radius: 999px; background: #34362f; color: #faf7ee; font: 500 11px/1.4 var(--font-sans); white-space: nowrap; }
+.scroll-work-open > span { display: inline-block; transition: transform .2s ease; }
+.scroll-work-cover > .scroll-work-open { position: absolute; bottom: 8px; right: 8px; pointer-events: none; }
+.scroll-work-links { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.scroll-work-links button { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-top: 1px solid currentColor; background: transparent; padding: 8px 0 0; text-align: left; color: inherit; font: 11px sans-serif; cursor: pointer; }
+.scroll-work-link-hint { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 10px; white-space: nowrap; }
+.scroll-work-link-hint > span { transition: transform .2s ease; }
+.scroll-work-front { justify-content: center; }
+.scroll-work-front h3 { font-size: clamp(32px, 5vw, 52px); margin: 26px 0 16px; }
+.scroll-work-stamp { background: #34362f; color: #191a17; padding: 4px 8px; font: 700 9px Arial, sans-serif; }
+.scroll-work-front > .scroll-work-open { cursor: pointer; }
+.scroll-work-face button:focus-visible .scroll-work-open > span, .scroll-work-open:focus-visible > span, .scroll-work-links button:focus-visible .scroll-work-link-hint > span { transform: translate(2px, -2px); }
+.scroll-work-face button:focus-visible img { transform: scale(1.025); }
+@media (hover: hover) and (pointer: fine) {
+  .scroll-work-cover:hover img { transform: scale(1.025); }
+  .scroll-work-cover:hover .scroll-work-open > span, .scroll-work-open:hover > span, .scroll-work-links button:hover .scroll-work-link-hint > span { transform: translate(2px, -2px); }
+}
+@media (prefers-reduced-motion: reduce) { .scroll-work-cover img, .scroll-work-open > span, .scroll-work-link-hint > span { transition: none; } }
+.scroll-work-face button:focus-visible { outline: 3px solid var(--card-ink); outline-offset: 4px; }
+.scroll-work-hint { font: 10px monospace; letter-spacing: 1px; display: flex; gap: 30px; }
+.scroll-work-progress { width: 100px; height: 2px; background: #14171422; }
+.scroll-work-progress > div { height: 100%; background: #e5c778; transform-origin: left; }
+.scroll-work-gallery--still .scroll-work-stage { position: relative; height: auto; overflow: visible; }
+.scroll-work-gallery--still .scroll-work-title { position: relative; top: auto; margin: 32px 0; }
+.scroll-work-gallery--still .scroll-work-deck { display: grid; gap: 24px; aspect-ratio: auto; }
+.scroll-work-gallery--still .scroll-work-card { position: relative; aspect-ratio: 3 / 4; }
+.scroll-work-gallery--still .scroll-work-back { transform: none; }
+@media(max-width:640px) { .scroll-work-stage { padding: 80px 16px 20px; } .scroll-work-stage > header { font-size: 8px; letter-spacing: .5px; } .scroll-work-title { top: 19%; letter-spacing: -.7px; } .scroll-work-face { padding: 18px; } .scroll-work-face h3 { margin: 14px 0; } .scroll-work-face p { font-size: 11px; margin: 12px 0; } .scroll-work-hint { align-self: flex-end; gap: 12px; font-size: 8px; letter-spacing: 0; } }
+@media(max-height:550px) { .scroll-work-stage { padding-top: 70px; gap: 6px; } .scroll-work-face { padding: 12px; } .scroll-work-face h3 { font-size: 18px; margin: 8px 0; } .scroll-work-face p { margin: 6px 0; font-size: 10px; } .scroll-work-links button { font-size: 9px; padding-top: 4px; } .scroll-work-front h3 { font-size: 28px; } }
+
+/* The invitation overlaps the departing card and follows the page into contact. */
+.scroll-work-outro { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 110px 24px 90px; pointer-events: none; text-align: center; color: #34362f; }
+.scroll-work-outro-caption { margin: 0 0 28px; font: 400 12px/1.8 "Microsoft YaHei", sans-serif; letter-spacing: .14em; color: #787062; }
+.scroll-work-outro h2 { margin: 0; font: 400 clamp(34px, 5vw, 72px)/1.45 "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif; letter-spacing: .025em; }
+.scroll-work-outro-mask { display: block; overflow: hidden; padding: .12em .2em; }
+.scroll-work-outro-mask > span { display: block; transform-origin: left bottom; }
+.scroll-work-outro-line { width: clamp(100px, 18vw, 240px); height: 2px; margin: 32px 0 22px; background: #bc963e; transform-origin: center; }
+.scroll-work-outro-invite { margin: 0; font: 400 14px/1.8 "Microsoft YaHei", sans-serif; color: #787062; }
+.scroll-work-outro-invite span { display: block; margin-top: 14px; font-size: 24px; color: #8b6e29; }
+.scroll-work-gallery--still .scroll-work-outro { position: relative; padding: 90px 0 60px; }
+@media (max-width: 640px) { .scroll-work-outro { padding-inline: 16px; } .scroll-work-outro h2 { font-size: clamp(25px, 6.4vw, 34px); } .scroll-work-outro-caption { font-size: 10px; letter-spacing: .06em; margin-bottom: 20px; } .scroll-work-outro-invite { font-size: 12px; } }
+@media (max-height: 550px) { .scroll-work-outro h2 { font-size: 32px; } .scroll-work-outro-caption { margin-bottom: 12px; } .scroll-work-outro-line { margin: 12px 0; } }

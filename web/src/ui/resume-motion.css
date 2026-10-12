@@ -1,0 +1,275 @@
+/* Reading columns for the three camera-aligned story chapters. */
+.resume--editorial {
+  --resume-ink: #fafdf3;
+  --resume-muted: rgba(250, 253, 243, 0.7);
+  --resume-accent: #a9957b;
+  color: var(--resume-ink);
+}
+
+.resume--editorial .resume-heading {
+  width: min(480px, 90vw);
+  margin: 0 6vw 0 auto;
+}
+
+.resume--editorial .timeline::before {
+  display: none;
+}
+
+.resume--editorial .resume-kicker,
+.resume--editorial .tl-chapter-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  font-family: var(--font-body), var(--font-cjk), monospace;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--resume-muted);
+}
+
+.resume--editorial .resume-kicker {
+  margin: 0 0 24px;
+}
+
+.resume--editorial .resume-title,
+.resume--editorial .tl-chapter-title {
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-display), monospace;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--resume-ink);
+  text-shadow: none;
+}
+
+.resume--editorial .resume-title {
+  font-size: clamp(56px, 6.1vw, 86px);
+}
+
+.resume--editorial .resume-explore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 28px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(250, 253, 243, 0.22);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--resume-muted);
+}
+
+.resume--editorial .resume-explore > span {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--resume-accent);
+}
+
+.resume--editorial .tl-body {
+  position: relative;
+  isolation: isolate;
+}
+
+.resume--editorial .tl-parallax-story {
+  position: relative;
+}
+
+.resume--editorial .tl-chapter {
+  margin-bottom: 42px;
+}
+
+.resume--editorial .tl-chapter-meta {
+  margin-bottom: 25px;
+  font-variant-numeric: tabular-nums;
+}
+
+.resume--editorial .tl-chapter-number {
+  color: var(--resume-accent);
+}
+
+.resume--editorial .tl-chapter-rule {
+  flex: 1;
+  height: 1px;
+  background: rgba(250, 253, 243, 0.22);
+}
+
+.resume--editorial .tl-chapter-title {
+  font-size: clamp(44px, 4.8vw, 68px);
+}
+
+.resume--editorial .tl-content {
+  max-width: 445px;
+  font-family: var(--font-sans);
+}
+
+.resume--editorial .tl-period {
+  margin: 0 0 12px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.8;
+  letter-spacing: 0.04em;
+  color: var(--resume-accent);
+}
+
+.resume--editorial .tl-place {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(20px, 2vw, 25px);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: var(--resume-ink);
+}
+
+.resume--editorial .tl-role {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--resume-muted);
+}
+
+.resume--editorial .tl-points {
+  gap: 1em;
+  margin-top: 24px;
+}
+
+.resume--editorial .tl-points li {
+  padding-left: 19px;
+  font-size: 15px;
+  line-height: 1.9;
+  letter-spacing: 0;
+  color: var(--resume-ink);
+}
+
+.resume--editorial .tl-points li::before {
+  content: '';
+  top: 0.95em;
+  width: 7px;
+  height: 1px;
+  background: var(--resume-accent);
+}
+
+.resume--editorial .tl-group {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(250, 253, 243, 0.18);
+}
+
+.resume--editorial .tl-group-head {
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.7;
+  color: var(--resume-ink);
+}
+
+.resume--editorial .tl-group-sub {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--resume-muted);
+}
+
+.resume--editorial .zooop-logo-link,
+.resume--editorial .tl-logo {
+  color: var(--resume-ink);
+}
+
+.resume--editorial .zooop-logo-link {
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 17px;
+  border: 1px solid rgba(250, 253, 243, 0.32);
+  border-radius: 999px;
+}
+
+.resume--editorial a:focus-visible {
+  outline: 2px solid var(--resume-accent);
+  outline-offset: 5px;
+}
+
+/* Keyboard navigation reveals linked content without waiting for animation. */
+.resume--editorial .tl-body:focus-within [data-resume-reveal],
+.resume--editorial .tl-body:focus-within [data-parallax-layer],
+.resume--editorial .tl-body:focus-within .scroll-letter {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (hover: hover) {
+  .resume--editorial .zooop-logo-link:hover,
+  .resume--editorial .tl-logo:hover {
+    color: var(--resume-accent);
+    border-color: var(--resume-accent);
+  }
+}
+
+@media (max-width: 640px) {
+  .resume--editorial .resume-heading,
+  .resume--editorial .timeline {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .resume--editorial .tl-entry {
+    padding-left: 20px;
+  }
+
+  .resume--editorial .resume-title {
+    font-size: clamp(43px, 11.5vw, 64px);
+  }
+
+  .resume--editorial .tl-body {
+    padding: 24px 0 26px;
+    background: none;
+    border-radius: 0;
+  }
+
+  .resume--editorial .tl-chapter {
+    margin-bottom: 34px;
+  }
+
+  .resume--editorial .tl-chapter-meta {
+    gap: 15px;
+    margin-bottom: 22px;
+  }
+
+  .resume--editorial .tl-chapter-title {
+    font-size: clamp(35px, 9.4vw, 52px);
+  }
+
+  .resume--editorial .tl-place {
+    font-size: 21px;
+  }
+
+  .resume--editorial .tl-points li {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume--editorial [data-parallax-layer],
+  .resume--editorial [data-resume-reveal],
+  .resume--editorial .scroll-letter {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Three shorter chapters leave room for the work while retaining camera reading stops. */
+.resume.resume--editorial { padding-top: 10vh; padding-bottom: 10vh; }
+.resume--editorial .timeline { margin-top: 6vh; }
+.resume--editorial .tl-entry { padding-bottom: 20vh; }
+.resume--editorial .tl-entry:last-child { padding-bottom: 12vh; }
+.resume--editorial .tl-chapter { margin-bottom: 26px; }
+.resume--editorial .tl-points li { font-size: 17px; line-height: 1.85; }
+.resume--editorial .tl-role { font-size: 14px; }
+@media (max-width: 640px) {
+  .resume--editorial .tl-entry { padding-left: 0; padding-bottom: 14vh; }
+  .resume--editorial .tl-points li { font-size: 16px; }
+}

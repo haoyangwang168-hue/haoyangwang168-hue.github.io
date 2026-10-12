@@ -1,0 +1,10 @@
+node_modules/
+dist/
+artifacts/
+preview-logs/
+deploy/
+.env
+.env.*
+*.log
+*.tsbuildinfo
+.DS_Store

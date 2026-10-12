@@ -1,0 +1,48 @@
+.image-flow { margin: 24px 0 0; color: var(--wk-ink); }
+.image-flow-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(320px, 64vh, 720px);
+  overflow: hidden;
+  background: #eceee5;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  isolation: isolate;
+}
+.image-flow-stage[hidden] { display: none; }
+.image-flow-stage[data-dragging] { cursor: grabbing; }
+.image-flow-slide {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: #e0e2d9;
+  cursor: inherit;
+  transform-origin: bottom left;
+  will-change: transform;
+}
+.image-flow-slide img { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; pointer-events: none; }
+.image-flow-hint { position: absolute; top: 24px; left: clamp(20px, 4vw, 56px); z-index: 20; font-size: 12px; color: #62655d; pointer-events: none; }
+.image-flow-full { display: grid; place-items: center; height: clamp(320px, 64vh, 720px); padding: 20px; background: #eceee5; }
+.image-flow-full img { display: block; width: 100%; height: 100%; max-height: 100%; min-height: 0; object-fit: contain; }
+.image-flow-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px clamp(20px, 4vw, 56px); border-bottom: 1px solid var(--wk-line); font-size: 13px; line-height: 1.6; }
+.image-flow-status button { border: 1px solid var(--wk-ink); padding: 8px 12px; color: var(--wk-ink); background: transparent; font: inherit; cursor: pointer; }
+.image-flow-status button:focus-visible { outline: 2px solid var(--wk-ink); outline-offset: 3px; }
+.image-flow-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px clamp(20px, 4vw, 56px); border-bottom: 1px solid var(--wk-line); }
+.image-flow-caption { display: flex; flex-direction: column; gap: 8px; margin: 0; max-width: 58%; font-size: 13px; line-height: 1.8; }
+.image-flow-caption > span { color: var(--wk-label); font-size: 11px; font-variant-numeric: tabular-nums; }
+.image-flow-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: end; }
+.image-flow-actions button { padding: 9px 12px; border: 1px solid var(--wk-line); background: transparent; color: var(--wk-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.image-flow-actions button:hover { background: #e6e8df; }
+.image-flow-actions button:focus-visible { outline: 2px solid var(--wk-ink); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .image-flow-stage, .image-flow-full { height: 48svh; min-height: 300px; }
+  .image-flow-controls { align-items: start; flex-direction: column; gap: 16px; padding: 20px; }
+  .image-flow-caption { max-width: 100%; }
+  .image-flow-actions { justify-content: start; }
+}
