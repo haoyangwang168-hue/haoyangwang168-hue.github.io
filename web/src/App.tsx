@@ -4,6 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { MotionConfig, motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from 'framer-motion'
 import * as THREE from 'three'
 import Scene from './scene/Scene'
+import RenderActivity from './scene/RenderActivity'
 import Resume from './ui/Resume'
 import Works from './ui/Works'
 import PortraitGallery from './ui/PortraitGallery'
@@ -165,14 +166,16 @@ export default function App() {
         <SceneBoundary onError={onSceneError}>
         <Canvas
           shadows={{ type: THREE.PCFShadowMap }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
+          frameloop="demand"
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
-          gl={{ antialias: false, stencil: false, depth: true, toneMapping: THREE.ACESFilmicToneMapping }}
+          gl={{ antialias: false, stencil: false, depth: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}
         >
           <color attach="background" args={['#0a0a0d']} />
           <Suspense fallback={null}>
             <Backdrop />
             <Scene />
+            <RenderActivity coverProgress={paperProgress} />
           </Suspense>
         </Canvas>
         </SceneBoundary>

@@ -323,6 +323,8 @@ function Man2({
   const paraQuat = useRef(new THREE.Quaternion())
 
   useFrame((_, dt) => {
+    // A demand-rendered scene can resume after minutes; do not jump its damping.
+    dt = Math.min(dt, 0.05)
     const a = 1 - Math.exp(-Math.max(0, dt) / cam.response)
 
     // 1) 由履历锚点（文档坐标）算连续索引 s：

@@ -128,6 +128,7 @@ export function useFaceInteraction(model: THREE.Object3D) {
   }, [model, get, uniforms, sockets])
 
   useFrame((_, seconds) => {
+    seconds = Math.min(seconds, 0.05)
     const state = input.current
     const pull = uniforms.facePull.value
     pull.x = recoverFace(pull.x, state.hold ? state.dx : 0, seconds, state.hold)
