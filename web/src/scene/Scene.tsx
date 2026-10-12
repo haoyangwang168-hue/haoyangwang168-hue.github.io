@@ -1,7 +1,6 @@
-import { Suspense, useMemo, useRef, useEffect, type MutableRefObject } from 'react'
+import { useMemo, useRef, useEffect, type MutableRefObject } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { EffectComposer, Bloom, DepthOfField, SMAA } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import Env from './Env'
 import { useFaceInteraction } from './useFaceInteraction'
@@ -98,11 +97,6 @@ function Lights() {
         position={c.keyPos}
         intensity={c.keyIntensity}
         color={c.keyColor}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-radius={3}
-        shadow-bias={-0.00015}
-        shadow-normalBias={0.015}
       />
       <directionalLight position={c.fillPos} intensity={c.fillIntensity} color={c.fillColor} />
       <directionalLight position={[1, 4, -4]} intensity={0.85} color="#fff4e4" />
@@ -538,75 +532,6 @@ function Man2({
   )
 }
 
-// 后处理：DepthOfField → Bloom → SMAA。
-// DoF 焦点逐帧跟随 focusRef（自动对焦）；30–220 帧间收紧清晰范围、加大虚化。
-function Post2({
-  focusRef,
-  frameRef,
-  dofBokehRef,
-  dofRangeRef,
-}: {
-  focusRef: MutableRefObject<THREE.Vector3>
-  frameRef: MutableRefObject<number>
-  dofBokehRef: MutableRefObject<number>
-  dofRangeRef: MutableRefObject<number>
-}) {
-  const post = {
-    bloomIntensity: 0.12,
-    bloomThreshold: 1.1,
-    dof: true,
-    startBokeh: 7.4,
-    startRange: 2.0,
-    focusBokeh: 11.0,
-    focusRange: 0.15,
-    startBlendFrame: 48,
-    endBlendFrame: RESUME_FRAMES - 50, // 末节点附近回到"起始帧"景深档（原 250−50=200）
-  }
-
-  const dofRef = useRef<any>(null)
-  useFrame(() => {
-    const e = dofRef.current
-    if (!e) return
-    if (e.target && focusRef) e.target.copy(focusRef.current)
-    // 权重 w=1 用"开始帧档"，w=0 用"聚焦点档"。
-    // 开头(f→0)和末节点(f→RESUME_FRAMES)都取开始帧档；中间各节点取聚焦点档。
-    const f = frameRef ? frameRef.current : 0
-    const wStart = 1 - THREE.MathUtils.smoothstep(f, 0, post.startBlendFrame)
-    const wEnd = THREE.MathUtils.smoothstep(f, post.endBlendFrame, RESUME_FRAMES)
-    const w = Math.max(wStart, wEnd)
-    if (dofBokehRef && dofBokehRef.current >= 0) {
-      // glb 自带逐锚点景深参数（intro3d 导出）：直接采用，忠实还原 intro3d 的虚化强度/清晰范围（bokeh=0 即该点关景深）。
-      e.bokehScale = dofBokehRef.current
-      if (e.cocMaterial) e.cocMaterial.focusRange = Math.max(1e-4, dofRangeRef ? dofRangeRef.current : post.focusRange)
-    } else {
-      // 老 glb（无逐锚点参数）：沿用原全局帧混合档位。
-      e.bokehScale = THREE.MathUtils.lerp(post.focusBokeh, post.startBokeh, w)
-      if (e.cocMaterial) e.cocMaterial.focusRange = THREE.MathUtils.lerp(post.focusRange, post.startRange, w)
-    }
-  })
-
-  return (
-    <EffectComposer multisampling={0} stencilBuffer={false} depthBuffer>
-      {(post.dof ? (
-        <DepthOfField
-          ref={dofRef}
-          target={[0, 1.3, 0]}
-          worldFocusRange={post.focusRange}
-          bokehScale={post.focusBokeh}
-          height={480}
-        />
-      ) : null) as any}
-      <Bloom
-        mipmapBlur
-        intensity={post.bloomIntensity}
-        luminanceThreshold={post.bloomThreshold}
-        luminanceSmoothing={0.3}
-      />
-      <SMAA />
-    </EffectComposer>
-  )
-}
-
 // 场景根组件：展示 me.glb（相机由 glb 动画 + 滚动驱动）
 export default function Scene() {
   const focusRef = useRef(new THREE.Vector3(0, 1.3, 0))
@@ -618,12 +543,10 @@ export default function Scene() {
     <>
       <GradientBackground />
 
-      <Suspense fallback={null}>
-        <Lights />
-        <Man2 focusRef={focusRef} frameRef={frameRef} dofBokehRef={dofBokehRef} dofRangeRef={dofRangeRef} />
-      </Suspense>
+      <Lights />
+      <Man2 focusRef={focusRef} frameRef={frameRef} dofBokehRef={dofBokehRef} dofRangeRef={dofRangeRef} />
 
-      <Post2 focusRef={focusRef} frameRef={frameRef} dofBokehRef={dofBokehRef} dofRangeRef={dofRangeRef} />
+      {/* Direct rendering avoids full-screen depth, bloom and SMAA passes. */}
     </>
   )
 }

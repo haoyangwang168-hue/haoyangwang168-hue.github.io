@@ -189,8 +189,7 @@ canvas {
   z-index: 3;
   pointer-events: none;
   background: rgba(10, 10, 13, 0.14);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
+  /* Keep copy legible without blurring the live 3D canvas every frame. */
   -webkit-mask: linear-gradient(to right, transparent 0%, #000 46%);
   mask: linear-gradient(to right, transparent 0%, #000 46%);
 }

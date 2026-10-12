@@ -8,7 +8,6 @@ import RenderActivity from './scene/RenderActivity'
 import Resume from './ui/Resume'
 import Works from './ui/Works'
 import PortraitGallery from './ui/PortraitGallery'
-import LoadingScreen from './ui/LoadingScreen'
 import RevealHeading from './ui/RevealHeading'
 import ExploreNav from './ui/ExploreNav'
 import ParallaxFooter from './ui/ParallaxFooter'
@@ -113,12 +112,8 @@ function Hero({ lang, cueOpacity, ready }: { lang: Lang; cueOpacity: MotionValue
 export default function App() {
   const [lang, setLang] = useState<Lang>('zh')
   const [sceneFailed, setSceneFailed] = useState(false)
-  const [introRevealed, setIntroRevealed] = useState(false)
-  const [introComplete, setIntroComplete] = useState(false)
   const [paperDissolveAvailable, setPaperDissolveAvailable] = useState(true)
   const reduced = usePrefersReducedMotion()
-  const revealIntro = useCallback(() => setIntroRevealed(true), [])
-  const finishIntro = useCallback(() => setIntroComplete(true), [])
   const onSceneError = useCallback(() => setSceneFailed(true), [])
   const onPaperDissolveUnavailable = useCallback(() => setPaperDissolveAvailable(false), [])
   const paperDissolveEnabled = paperDissolveAvailable && !reduced && !sceneFailed
@@ -152,12 +147,11 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      {/* 加载遮罩：模型全部加载完成前覆盖全屏，完成后淡出 */}
-      {!introComplete && <LoadingScreen sceneFailed={sceneFailed} onReveal={revealIntro} onComplete={finishIntro} />}
-      <div {...(!introComplete ? { inert: '' } : {})}>
+      {/* The page stays usable while the portrait loads in Suspense. */}
+      <div>
 
       {/* 固定的 3D 背景 */}
-      <motion.div className="scene-bg" initial={false} animate={{ scale: introRevealed || reduced ? 1 : 1.035 }} transition={{ duration: reduced ? 0 : 2.2, ease: EDITORIAL_EASE }}>
+      <div className="scene-bg">
         {sceneFailed ? (
           <div className="scene-fallback">
             <img src={`${import.meta.env.BASE_URL}avatar/haoyang-toy-front.png`} alt="" />
@@ -165,11 +159,11 @@ export default function App() {
         ) : (
         <SceneBoundary onError={onSceneError}>
         <Canvas
-          shadows={{ type: THREE.PCFShadowMap }}
-          dpr={[1, 1.5]}
+          shadows={false}
+          dpr={[1, 1.25]}
           frameloop="demand"
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
-          gl={{ antialias: false, stencil: false, depth: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}
+          gl={{ antialias: true, stencil: false, depth: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}
         >
           <color attach="background" args={['#0a0a0d']} />
           <Suspense fallback={null}>
@@ -180,7 +174,7 @@ export default function App() {
         </Canvas>
         </SceneBoundary>
         )}
-      </motion.div>
+      </div>
       {sceneFailed && (
         <button className="scene-retry" onClick={() => {
           useGLTF.clear(`${import.meta.env.BASE_URL}models/me.glb`)
@@ -214,20 +208,20 @@ export default function App() {
 
       <ExploreNav
         lang={lang}
-        ready={introComplete}
+        ready
         onToggleLanguage={() => setLang((value) => value === 'en' ? 'zh' : 'en')}
       />
 
       {/* 可滚动内容 */}
       <main className="content" lang={lang}>
-        <Hero lang={lang} cueOpacity={cueOpacity} ready={introRevealed} />
+        <Hero lang={lang} cueOpacity={cueOpacity} ready />
         <PortraitGallery lang={lang} />
         <Resume lang={lang} transitionProgress={paperProgress} />
         <Works lang={lang} innerRef={worksRef} dissolveProgress={paperProgress} dissolveEnabled={paperDissolveEnabled} />
         <ParallaxFooter lang={lang} />
       </main>
       </div>
-      <ClickSpark enabled={introComplete} sparkColor="#e6c979" sparkSize={14} sparkRadius={30} sparkCount={8} duration={450} />
+      <ClickSpark enabled sparkColor="#e6c979" sparkSize={14} sparkRadius={30} sparkCount={8} duration={450} />
     </MotionConfig>
   )
 }
