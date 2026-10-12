@@ -51,7 +51,7 @@ function OpeningType({ swapped, leaving, reduced }: { swapped: boolean; leaving:
   )
 }
 
-/** Reveal the scene after real asset readiness and the opening typography sequence. */
+/** Play the opening once, then enter automatically even if the model is still downloading. */
 export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { sceneFailed: boolean; onReveal: () => void; onComplete: () => void }) {
   const { progress, active, total } = useProgress()
   const reduced = Boolean(useReducedMotion())
@@ -59,7 +59,7 @@ export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { s
   const [swapped, setSwapped] = useState(false)
   const [leaving, setLeaving] = useState<OpeningExitMode | null>(null)
   const started = useRef(false)
-  const enterButton = useRef<HTMLButtonElement>(null)
+  const openingPanel = useRef<HTMLDivElement>(null)
   const ready = openingAssetsReady(active, progress, total, sceneFailed)
   const percentage = sceneFailed ? 100 : Math.round(Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0)
   const exit = getOpeningExit(leaving ?? 'auto', reduced)
@@ -78,7 +78,7 @@ export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { s
     document.body.style.overflow = 'hidden'
     window.history.scrollRestoration = 'manual'
     window.scrollTo({ top: 0, behavior: 'instant' })
-    enterButton.current?.focus({ preventScroll: true })
+    openingPanel.current?.focus({ preventScroll: true })
     return () => {
       document.body.style.overflow = previous
       window.history.scrollRestoration = previousRestoration
@@ -100,8 +100,9 @@ export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { s
   }, [reduced])
 
   useEffect(() => {
-    if (ready && minimumElapsed) reveal('auto')
-  }, [ready, minimumElapsed, reveal])
+    // Network delays must never hold visitors behind the opening curtain.
+    if (minimumElapsed) reveal('auto')
+  }, [minimumElapsed, reveal])
 
   useEffect(() => {
     if (!leaving) return
@@ -112,6 +113,8 @@ export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { s
 
   return (
     <div
+      ref={openingPanel}
+      tabIndex={-1}
       className="loading-screen opening"
       data-phase={leaving ? 'revealing' : minimumElapsed && !ready ? 'loading' : swapped ? 'monogram' : 'name'}
       data-assets-ready={ready}
@@ -139,7 +142,6 @@ export default function LoadingScreen({ sceneFailed, onReveal, onComplete }: { s
       ))}
       <motion.div className="opening-controls" animate={{ opacity: leaving ? 0 : 1 }} transition={{ duration: reduced ? 0 : 0.15 }}>
         <span className="opening-counter" aria-hidden="true">{String(percentage).padStart(3, '0')}<span>%</span></span>
-        <button ref={enterButton} className="opening-enter" onClick={() => reveal('skip')} disabled={Boolean(leaving)} aria-label="跳过开场，进入作品集">{ready ? 'ENTER' : 'SKIP INTRO'} <span aria-hidden="true">↗</span></button>
       </motion.div>
       <motion.div className="opening-load" role="progressbar" aria-label="Loading scene" aria-valuenow={percentage} aria-valuemin={0} aria-valuemax={100} animate={{ opacity: leaving ? 0 : 1 }} transition={{ duration: reduced ? 0 : 0.15 }}>
         <motion.span animate={{ scaleX: percentage / 100 }} transition={{ duration: reduced ? 0 : 0.4, ease: EDITORIAL_EASE }} />

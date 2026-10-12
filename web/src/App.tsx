@@ -8,6 +8,7 @@ import RenderActivity from './scene/RenderActivity'
 import Resume from './ui/Resume'
 import Works from './ui/Works'
 import PortraitGallery from './ui/PortraitGallery'
+import LoadingScreen from './ui/LoadingScreen'
 import RevealHeading from './ui/RevealHeading'
 import ExploreNav from './ui/ExploreNav'
 import ParallaxFooter from './ui/ParallaxFooter'
@@ -112,6 +113,10 @@ function Hero({ lang, cueOpacity, ready }: { lang: Lang; cueOpacity: MotionValue
 export default function App() {
   const [lang, setLang] = useState<Lang>('zh')
   const [sceneFailed, setSceneFailed] = useState(false)
+  const [introRevealed, setIntroRevealed] = useState(false)
+  const [introComplete, setIntroComplete] = useState(false)
+  const revealIntro = useCallback(() => setIntroRevealed(true), [])
+  const finishIntro = useCallback(() => setIntroComplete(true), [])
   const [paperDissolveAvailable, setPaperDissolveAvailable] = useState(true)
   const reduced = usePrefersReducedMotion()
   const onSceneError = useCallback(() => setSceneFailed(true), [])
@@ -147,8 +152,8 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      {/* The page stays usable while the portrait loads in Suspense. */}
-      <div>
+      {!introComplete && <LoadingScreen sceneFailed={sceneFailed} onReveal={revealIntro} onComplete={finishIntro} />}
+      <div {...(!introComplete ? { inert: '' } : {})}>
 
       {/* 固定的 3D 背景 */}
       <div className="scene-bg">
@@ -208,20 +213,20 @@ export default function App() {
 
       <ExploreNav
         lang={lang}
-        ready
+        ready={introComplete}
         onToggleLanguage={() => setLang((value) => value === 'en' ? 'zh' : 'en')}
       />
 
       {/* 可滚动内容 */}
       <main className="content" lang={lang}>
-        <Hero lang={lang} cueOpacity={cueOpacity} ready />
+        <Hero lang={lang} cueOpacity={cueOpacity} ready={introRevealed} />
         <PortraitGallery lang={lang} />
         <Resume lang={lang} transitionProgress={paperProgress} />
         <Works lang={lang} innerRef={worksRef} dissolveProgress={paperProgress} dissolveEnabled={paperDissolveEnabled} />
         <ParallaxFooter lang={lang} />
       </main>
       </div>
-      <ClickSpark enabled sparkColor="#e6c979" sparkSize={14} sparkRadius={30} sparkCount={8} duration={450} />
+      <ClickSpark enabled={introComplete} sparkColor="#e6c979" sparkSize={14} sparkRadius={30} sparkCount={8} duration={450} />
     </MotionConfig>
   )
 }
