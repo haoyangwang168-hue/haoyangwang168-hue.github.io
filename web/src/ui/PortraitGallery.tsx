@@ -5,7 +5,7 @@ import { galleryWheelStep } from './gallery-math'
 import { useIsCompact, usePrefersReducedMotion } from './useParallax'
 import './portrait-gallery.css'
 
-const PHOTOS = ['haoyang-sunglasses.jpg', 'haoyang-portrait.jpg', 'haoyang-coast.jpg', 'haoyang-outdoors.jpg']
+const PHOTOS = ['haoyang-sunglasses.webp', 'haoyang-portrait.jpg', 'haoyang-coast.jpg', 'haoyang-outdoors.jpg']
 // Preserve hair in selfies and the off-centre subject in the seaside photograph.
 const PHOTO_FRAMING = [
   { scale: 1.3, position: '50% 0%', origin: '50% 0%', bias: 0.1 },
@@ -206,7 +206,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
             if (event.detail > 0 && performance.now() < suppressClickUntil.current) return
             setSelected(index % 4)
           }}>
-          <img src={photoUrl(index % 4)} alt={LABELS[lang][index % 4]} style={{ objectPosition: PHOTO_FRAMING[index % 4].position, transformOrigin: PHOTO_FRAMING[index % 4].origin }} loading="lazy" draggable={false} />
+          <img src={photoUrl(index % 4)} alt={LABELS[lang][index % 4]} style={{ objectPosition: PHOTO_FRAMING[index % 4].position, transformOrigin: PHOTO_FRAMING[index % 4].origin }} loading="eager" decoding="async" draggable={false} />
           <span className="portrait-caption"><span>{String(index % 4 + 1).padStart(2, '0')} / HAOYANG</span><span>↗</span></span>
         </button>)}
       </div>

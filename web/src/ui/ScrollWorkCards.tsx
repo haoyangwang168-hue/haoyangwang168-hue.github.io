@@ -62,7 +62,7 @@ function Card({ section, index, count, progress, data, onOpen, reduced }: { sect
       <span className="scroll-work-eyebrow">{section.no} / SELECTED WORK</span>
       <h3>{section.title}</h3>
       <button className="scroll-work-cover" disabled={!items.length} onClick={() => items[0] && onOpen(items[0])} aria-label={`${data.openLabel}: ${items[0]?.name ?? section.title}`}>
-        <img src={SECTION_COVERS[section.id]} alt="" loading="lazy" draggable={false} /><span className="scroll-work-open" aria-hidden="true">{data.openLabel}<span>↗</span></span>
+        <img src={SECTION_COVERS[section.id]} alt="" loading="eager" decoding="async" draggable={false} /><span className="scroll-work-open" aria-hidden="true">{data.openLabel}<span>↗</span></span>
       </button>
       <p>{section.tagline}</p>
       <div className="scroll-work-links">{items.map(item => <button key={item.name} onClick={() => onOpen(item)}>{item.name}<span className="scroll-work-link-hint" aria-hidden="true">{data.openLabel}<span>↗</span></span></button>)}</div>

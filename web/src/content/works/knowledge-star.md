@@ -12,8 +12,8 @@ LPT 第七期社群 Demo 实践项目，由团队共同构思。用 AI 将零散
 
 ![结构化知识笔记界面](./media/knowledge-star-notes.webp)
 
-![知识处理：上传素材与自动处理流程](./media/knowledge-star-processing.png)
+![知识处理：上传素材与自动处理流程](./media/knowledge-star-processing.webp)
 
-![知识星图：个人知识星域与笔记关联](./media/knowledge-star-constellation.png)
+![知识星图：个人知识星域与笔记关联](./media/knowledge-star-constellation.webp)
 
-![LPT Demo Day 2026 视觉美学奖获奖海报](./media/knowledge-star-award.png)
+![LPT Demo Day 2026 视觉美学奖获奖海报](./media/knowledge-star-award.webp)

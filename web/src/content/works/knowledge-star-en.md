@@ -12,8 +12,8 @@ The project received the **Demo Visual Aesthetics Award**.
 
 ![Structured knowledge notes interface](./media/knowledge-star-notes.webp)
 
-![Knowledge processing: material upload and automated processing pipeline](./media/knowledge-star-processing.png)
+![Knowledge processing: material upload and automated processing pipeline](./media/knowledge-star-processing.webp)
 
-![Knowledge constellation: personal knowledge map and connected notes](./media/knowledge-star-constellation.png)
+![Knowledge constellation: personal knowledge map and connected notes](./media/knowledge-star-constellation.webp)
 
-![LPT Demo Day 2026 Visual Aesthetics Award poster](./media/knowledge-star-award.png)
+![LPT Demo Day 2026 Visual Aesthetics Award poster](./media/knowledge-star-award.webp)
