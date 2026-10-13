@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from 'framer-motion'
+import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { usePrefersReducedMotion } from './useParallax'
 import { footerPose } from './footer-motion'
 import ContactDialog from './ContactDialog'
@@ -34,18 +34,17 @@ export default function ParallaxFooter({ lang }: ParallaxFooterProps) {
   const reduced = usePrefersReducedMotion()
   const copy = COPY[lang]
   const { scrollYProgress } = useScroll({ target: stage, offset: ['start start', 'end end'] })
-  // One damped morph drives every letter property, including reverse scroll.
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 160, damping: 30, mass: 0.7 })
-  const morphTarget = useTransform(scrollYProgress, p => reduced ? 1 : footerPose(p).morph)
-  const smoothMorph = useSpring(morphTarget, { stiffness: 160, damping: 30, mass: 0.7, restDelta: 0.0001, restSpeed: 0.0001 })
+  // Native scroll drives every layer without a delayed spring tail.
+  const progress = scrollYProgress
+  const morphProgress = useTransform(scrollYProgress, p => reduced ? 1 : footerPose(p).morph)
   const letterTransform = useTransform(() => {
-    const value = smoothMorph.get()
+    const value = morphProgress.get()
     const morph = reduced ? 1 : value
-    const pose = footerPose(smoothProgress.get(), 5)
+    const pose = footerPose(progress.get(), 5)
     const scale = reduced ? 1.3 : pose.scale + (1.3 - pose.scale) * morph
     return `translate(450 ${200 + pose.y + morph * 145}) rotate(${morph * 90}) scale(${scale}) translate(-450 -200)`
   })
-  const frontTransform = useTransform(smoothProgress, (p) => {
+  const frontTransform = useTransform(progress, (p) => {
     const pose = footerPose(reduced ? 1 : p, 5)
     return `translate(450 ${200 + pose.y}) scale(${pose.scale}) translate(-450 -200)`
   })
@@ -55,19 +54,19 @@ export default function ParallaxFooter({ lang }: ParallaxFooterProps) {
     letter.current?.setAttribute('transform', letterTransform.get())
     front.current?.setAttribute('transform', frontTransform.get())
   }, [reduced, letterTransform, frontTransform])
-  const labelOpacity = useTransform(smoothMorph, [0.85, 1], [0, 1])
+  const labelOpacity = useTransform(morphProgress, [0.85, 1], [0, 1])
   // Widen only the I stem during the morph; the final contact hit area stays generous.
-  const letterWidth = useTransform(smoothMorph, p => 16 + 24 * (reduced ? 1 : p))
+  const letterWidth = useTransform(morphProgress, p => 16 + 24 * (reduced ? 1 : p))
   const letterX = useTransform(letterWidth, width => 450 - width / 2)
-  const serifOpacity = useTransform(smoothMorph, p => reduced ? 0 : 1 - p)
-  const mobileStroke = useTransform(smoothMorph, (p) => `${(reduced ? 1 : p) * 40}px`)
+  const serifOpacity = useTransform(morphProgress, p => reduced ? 0 : 1 - p)
+  const mobileStroke = useTransform(morphProgress, (p) => `${(reduced ? 1 : p) * 40}px`)
   return (
     <footer className={`parallax-footer${reduced ? ' pf-reduced' : ''}`} ref={stage} lang={lang} aria-labelledby="footer-invitation">
       <div className="pf-sticky">
         <div className="pf-topline"><p>{copy.chapter}</p><span>GUANGZHOU, CN</span></div>
         <div className="pf-invitation"><h2 id="footer-invitation">{copy.headline.map((line) => <span key={line}>{line}</span>)}</h2><div className="pf-contact"><p>{copy.contact}</p><a href="tel:+8619120353235" aria-label={`${copy.phone} · 191 2035 3235`}>191 2035 3235 ↗</a></div></div>
         <motion.div className="pf-build" style={{ '--pf-button-stroke': mobileStroke } as import('framer-motion').MotionStyle}><svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
-          <g aria-hidden="true">{[0, 1, 2, 3, 4].map((index) => <EchoLayer key={index} index={index} progress={smoothProgress} reduced={reduced} />)}<g ref={front} transform={frontTransform.get()} className="pf-build-front"><path d={BUILD_PATH} fillRule="evenodd" /></g></g>
+          <g aria-hidden="true">{[0, 1, 2, 3, 4].map((index) => <EchoLayer key={index} index={index} progress={progress} reduced={reduced} />)}<g ref={front} transform={frontTransform.get()} className="pf-build-front"><path d={BUILD_PATH} fillRule="evenodd" /></g></g>
           <motion.a href="#contact-info" onClick={event => { event.preventDefault(); setContactOpen(true) }} aria-label={lang === 'zh' ? '打开联系方式' : 'Open contact details'} aria-haspopup="dialog" className="pf-morph-link">
             <g ref={letter} transform={letterTransform.get()}><motion.path d={I_SERIFS} style={{ opacity: serifOpacity }} /><motion.rect x={letterX} y="100" width={letterWidth} height="200" /></g>
             <motion.text x="450" y="371" textAnchor="middle" dominantBaseline="middle" style={{ opacity: reduced ? 1 : labelOpacity }} aria-hidden="true">{copy.button}</motion.text>

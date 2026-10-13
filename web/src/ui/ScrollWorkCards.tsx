@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { motion, useScroll, useSpring, useTransform, type MotionValue } from 'framer-motion'
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { SECTION_COVERS, type WorkSection, type WorkListItem, type WorksLang } from '../data/works'
 import { useIsCompact, usePrefersReducedMotion } from './useParallax'
 import { workOutroPose, workTimeline } from './work-outro'
@@ -14,27 +14,36 @@ function Card({ section, index, count, progress, data, onOpen, reduced }: { sect
   const frontRef = useRef<HTMLDivElement>(null)
   const backRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    const buttons = Array.from(cardRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])
+    let previousHidden: boolean | undefined
+    let previousFront: boolean | undefined
+    let previousTabIndex: number | undefined
     const update = (): void => {
       const current = pose.get()
       const hidden = !reduced && !current.clickable
       const frontVisible = !reduced && index === 0 && current.rotateY < 90
       if (cardRef.current) {
-        cardRef.current.inert = hidden
-        cardRef.current.setAttribute('aria-hidden', String(hidden))
+        if (hidden !== previousHidden) {
+          cardRef.current.inert = hidden
+          cardRef.current.setAttribute('aria-hidden', String(hidden))
+        }
         // Keep covered projects out of the tab sequence while allowing exposed card surfaces to click.
         const tabIndex = reduced || current.active ? 0 : -1
-        for (const button of cardRef.current.querySelectorAll<HTMLButtonElement>('button')) {
-          if (button.tabIndex !== tabIndex) button.tabIndex = tabIndex
+        if (tabIndex !== previousTabIndex) {
+          for (const button of buttons) button.tabIndex = tabIndex
+          previousTabIndex = tabIndex
         }
       }
-      if (frontRef.current) {
+      if (frontRef.current && (frontVisible !== previousFront || hidden !== previousHidden)) {
         frontRef.current.inert = !frontVisible || hidden
         frontRef.current.setAttribute('aria-hidden', String(!frontVisible || hidden))
       }
-      if (backRef.current) {
+      if (backRef.current && (frontVisible !== previousFront || hidden !== previousHidden)) {
         backRef.current.inert = frontVisible || hidden
         backRef.current.setAttribute('aria-hidden', String(frontVisible || hidden))
       }
+      previousHidden = hidden
+      previousFront = frontVisible
     }
     update()
     return pose.on('change', update)
@@ -90,10 +99,10 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const { scrollYProgress } = useScroll({ target: galleryRef, offset: ['start start', 'end end'] })
   const timeline = workTimeline(data.sections.length)
   const cardProgress = useTransform(scrollYProgress, p => Math.min(1, p / timeline.cardFraction))
-  // Damping absorbs wheel bursts without intercepting native document scroll.
-  const outroProgress = useSpring(cardProgress, { stiffness: 160, damping: 30, mass: 0.7, restDelta: 0.0001 })
+  // Keep the invitation on the same native scroll timeline as the departing cards.
+  const outroProgress = cardProgress
   const { scrollYProgress: rawExitProgress } = useScroll({ target: galleryRef, offset: ['end end', 'end start'] })
-  const exitProgress = useSpring(rawExitProgress, { stiffness: 160, damping: 30, mass: 0.7, restDelta: 0.0001 })
+  const exitProgress = rawExitProgress
   const outroOpacity = useTransform(() => workOutroPose(outroProgress.get(), exitProgress.get()).opacity)
   const outroVisibility = useTransform(outroOpacity, opacity => opacity > 0.001 ? 'visible' as const : 'hidden' as const)
   const lineScale = useTransform(() => workOutroPose(outroProgress.get(), exitProgress.get()).lineScale)

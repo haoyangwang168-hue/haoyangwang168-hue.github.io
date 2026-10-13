@@ -30,6 +30,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
     let frameId: number | null = null
     let lastTime = 0
     let touchId: number | null = null
+    let scrollingUntil = 0
 
     const write = (): void => {
       const pose = profileCardPose(x.position, y.position, light, tiltStrength, parallax)
@@ -79,7 +80,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       wake()
     }
     const aimAt = (event: PointerEvent): void => {
-      if (root.closest('[inert]')) return
+      if (performance.now() < scrollingUntil || root.closest('[inert]')) return
       const aim = profileCardAim(event.clientX, event.clientY, root.getBoundingClientRect())
       targetX = aim.x
       targetY = aim.y
@@ -104,6 +105,20 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       release()
     }
 
+    const onScroll = (): void => {
+      scrollingUntil = performance.now() + 120
+      if (frameId === null && x.position === 0 && y.position === 0 && light === 0) return
+      if (frameId !== null) cancelAnimationFrame(frameId)
+      frameId = null
+      x = { position: 0, velocity: 0 }
+      y = { position: 0, velocity: 0 }
+      targetX = 0
+      targetY = 0
+      light = 0
+      targetLight = 0
+      write()
+    }
+
     root.addEventListener('pointerenter', onEnter, { passive: true })
     root.addEventListener('pointermove', onMove, { passive: true })
     root.addEventListener('pointerleave', onLeave, { passive: true })
@@ -111,7 +126,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
     root.addEventListener('pointerup', onUp, { passive: true })
     root.addEventListener('pointercancel', onUp, { passive: true })
     // Reset the inner tilt as native scrolling moves or flips the outer card.
-    window.addEventListener('scroll', release, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('blur', release)
     return () => {
       if (frameId !== null) cancelAnimationFrame(frameId)
@@ -121,7 +136,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       root.removeEventListener('pointerdown', onDown)
       root.removeEventListener('pointerup', onUp)
       root.removeEventListener('pointercancel', onUp)
-      window.removeEventListener('scroll', release)
+      window.removeEventListener('scroll', onScroll)
       window.removeEventListener('blur', release)
       x = { position: 0, velocity: 0 }
       y = { position: 0, velocity: 0 }
