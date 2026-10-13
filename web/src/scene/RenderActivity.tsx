@@ -5,8 +5,9 @@ import type { MotionValue } from 'framer-motion'
 const SETTLE_MS = 3000
 const FRAME_INTERVAL_MS = 1000 / 30
 const MIN_SETTLE_FRAMES = 12
+const SCROLL_IDLE_MS = 150
 
-/** Limit portrait rendering to 30 fps so HTML scrolling has time to run. */
+/** Pause portrait updates during scrolling and resume interactions at 30 fps. */
 export default function RenderActivity({ coverProgress }: { coverProgress: MotionValue<number> }) {
   const invalidate = useThree(state => state.invalidate)
   const canvas = useThree(state => state.gl.domElement)
@@ -18,11 +19,13 @@ export default function RenderActivity({ coverProgress }: { coverProgress: Motio
     let deadline = 0
     let frame = 0
     let lastRender = -Infinity
-    const blocked = (): boolean => document.hidden || coverProgress.get() >= 1
+    let scrolling = false
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined
+    const blocked = (): boolean => scrolling || document.hidden || coverProgress.get() >= 1
     const stop = (): void => {
       cancelAnimationFrame(frame)
       frame = 0
-      canvas.dataset.renderActivity = document.hidden ? 'hidden' : coverProgress.get() >= 1 ? 'covered' : 'idle'
+      canvas.dataset.renderActivity = document.hidden ? 'hidden' : coverProgress.get() >= 1 ? 'covered' : scrolling ? 'scrolling' : 'idle'
     }
     const tick = (now: number): void => {
       frame = 0
@@ -45,13 +48,28 @@ export default function RenderActivity({ coverProgress }: { coverProgress: Motio
       canvas.dataset.renderActivity = 'active'
       if (!frame) frame = requestAnimationFrame(tick)
     }
-    const events = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel', 'scroll', 'resize', 'blur'] as const
+    const pauseForScroll = (): void => {
+      scrolling = true
+      stop()
+      clearTimeout(scrollTimer)
+      scrollTimer = setTimeout(() => {
+        scrolling = false
+        scrollTimer = undefined
+        wake()
+      }, SCROLL_IDLE_MS)
+    }
+    // Wheel pauses before the next scroll paint; scroll also covers touch and keyboard input.
+    const scrollEvents = ['wheel', 'scroll'] as const
+    scrollEvents.forEach(event => window.addEventListener(event, pauseForScroll, { passive: true }))
+    const events = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel', 'resize', 'blur'] as const
     events.forEach(event => window.addEventListener(event, wake, { passive: true }))
     document.addEventListener('visibilitychange', wake)
     const unsubscribe = coverProgress.on('change', wake)
     wake()
     return () => {
       stop()
+      clearTimeout(scrollTimer)
+      scrollEvents.forEach(event => window.removeEventListener(event, pauseForScroll))
       events.forEach(event => window.removeEventListener(event, wake))
       document.removeEventListener('visibilitychange', wake)
       unsubscribe()
