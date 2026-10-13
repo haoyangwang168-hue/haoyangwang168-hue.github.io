@@ -34,11 +34,14 @@ export function workCardPose(progress: number, index: number, count: number): { 
   const local = (p - 0.3) / 0.65 * count - index
   // Keep a short reading stop, then distribute movement over most of the scroll.
   const departure = clamp((local - 0.12) / 0.88)
+  // Let the next card rise into its reading position while its predecessor leaves.
+  const arrival = clamp((local + 0.5) / 0.5)
+  const approach = index > 0 ? (1 - arrival * arrival * (3 - 2 * arrival)) * spread : 0
   const angles = [0, -8, 7, -12]
   const activeIndex = Math.min(count - 1, Math.max(0, Math.floor((p - 0.3) / 0.65 * count)))
   return {
-    y: (1 - enter) * 65 + index * 2 * spread - departure * 230,
-    rotate: (angles[index % angles.length] + (index === 0 ? 4 : 0)) * spread + departure * (index % 2 ? 24 : -24),
+    y: (1 - enter) * 65 + index * 2 * spread + approach * 18 - departure * 230,
+    rotate: (angles[index % angles.length] + (index === 0 ? 4 : 0)) * spread + approach * (index % 2 ? -3 : 3) + departure * (index % 2 ? 24 : -24),
     rotateY: reveal * 180,
     // Translucent parents flatten the 3D faces; reveal cards by moving them instead.
     opacity: departure >= 1 ? 0 : 1,

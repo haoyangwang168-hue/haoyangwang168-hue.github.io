@@ -30,7 +30,8 @@ export default function ProfileCard({ children, className = '', enabled = true, 
     let frameId: number | null = null
     let lastTime = 0
     let touchId: number | null = null
-    let scrollingUntil = 0
+    let mouse: { clientX: number; clientY: number } | null = null
+    let scrollFrame: number | null = null
 
     const write = (): void => {
       const pose = profileCardPose(x.position, y.position, light, tiltStrength, parallax)
@@ -79,8 +80,8 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       targetLight = 0
       wake()
     }
-    const aimAt = (event: PointerEvent): void => {
-      if (performance.now() < scrollingUntil || root.closest('[inert]')) return
+    const aimAt = (event: { clientX: number; clientY: number }): void => {
+      if (root.closest('[inert]')) return
       const aim = profileCardAim(event.clientX, event.clientY, root.getBoundingClientRect())
       targetX = aim.x
       targetY = aim.y
@@ -105,19 +106,21 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       release()
     }
 
-    const onScroll = (): void => {
-      scrollingUntil = performance.now() + 120
-      if (frameId === null && x.position === 0 && y.position === 0 && light === 0) return
-      if (frameId !== null) cancelAnimationFrame(frameId)
-      frameId = null
-      x = { position: 0, velocity: 0 }
-      y = { position: 0, velocity: 0 }
-      targetX = 0
-      targetY = 0
-      light = 0
-      targetLight = 0
-      write()
+    const trackMouse = (event: PointerEvent): void => {
+      if (event.pointerType === 'mouse') mouse = { clientX: event.clientX, clientY: event.clientY }
     }
+    const onScroll = (): void => {
+      if (!mouse || scrollFrame !== null) return
+      // Retarget the exposed face even when the mouse stays still during scrolling.
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = null
+        if (!mouse) return
+        const hit = document.elementFromPoint(mouse.clientX, mouse.clientY)
+        if (hit && root.contains(hit) && !root.closest('[inert]')) aimAt(mouse)
+        else release()
+      })
+    }
+    const onBlur = (): void => { mouse = null; release() }
 
     root.addEventListener('pointerenter', onEnter, { passive: true })
     root.addEventListener('pointermove', onMove, { passive: true })
@@ -125,11 +128,12 @@ export default function ProfileCard({ children, className = '', enabled = true, 
     root.addEventListener('pointerdown', onDown, { passive: true })
     root.addEventListener('pointerup', onUp, { passive: true })
     root.addEventListener('pointercancel', onUp, { passive: true })
-    // Reset the inner tilt as native scrolling moves or flips the outer card.
+    window.addEventListener('pointermove', trackMouse, { passive: true })
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('blur', release)
+    window.addEventListener('blur', onBlur)
     return () => {
       if (frameId !== null) cancelAnimationFrame(frameId)
+      if (scrollFrame !== null) cancelAnimationFrame(scrollFrame)
       root.removeEventListener('pointerenter', onEnter)
       root.removeEventListener('pointermove', onMove)
       root.removeEventListener('pointerleave', onLeave)
@@ -137,7 +141,8 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       root.removeEventListener('pointerup', onUp)
       root.removeEventListener('pointercancel', onUp)
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('blur', release)
+      window.removeEventListener('pointermove', trackMouse)
+      window.removeEventListener('blur', onBlur)
       x = { position: 0, velocity: 0 }
       y = { position: 0, velocity: 0 }
       light = 0

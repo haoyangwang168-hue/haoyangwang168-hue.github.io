@@ -117,8 +117,8 @@ test('rear cards turn with the cover and unfold continuously without an opacity 
     }
   }
   const middle = workCardPose(0.26, 1, 4)
-  assert.ok(Math.abs(middle.rotate + 4) < 1e-10)
-  assert.ok(Math.abs(middle.y - 1) < 1e-10)
+  assert.ok(Math.abs(middle.rotate + 5.5) < 1e-10)
+  assert.ok(Math.abs(middle.y - 10) < 1e-10)
   for (const boundary of [0.22, 0.25, 0.3]) {
     for (let index = 0; index < 4; index++) {
       const before = workCardPose(boundary - 0.00001, index, 4)
@@ -128,5 +128,26 @@ test('rear cards turn with the cover and unfold continuously without an opacity 
       assert.ok(Math.abs(after.rotateY - before.rotateY) < 0.05)
       assert.equal(after.opacity, before.opacity)
     }
+  }
+})
+
+test('incoming cards move while their predecessor is visible and settle at unchanged reading stops', () => {
+  const count = 5
+  const interval = 0.65 / count
+  for (let index = 1; index < count; index++) {
+    const stop = workCardStop(index, count)
+    const start = workCardPose(stop - interval * 0.5, index, count)
+    const middle = workCardPose(stop - interval * 0.25, index, count)
+    const settled = workCardPose(stop, index, count)
+    // Halfway through arrival, half of the 18% lift has completed.
+    assert.ok(Math.abs(start.y - (index * 2 + 18)) < 1e-9)
+    assert.ok(Math.abs(middle.y - (index * 2 + 9)) < 1e-9)
+    assert.ok(Math.abs(settled.y - index * 2) < 1e-9)
+    assert.equal(workCardPose(stop - interval * 0.25, index - 1, count).opacity, 1)
+    assert.equal(middle.clickable, true)
+    for (const boundary of [stop - interval * 0.5, stop]) {
+      assert.ok(Math.abs(workCardPose(boundary + 1e-7, index, count).y - workCardPose(boundary - 1e-7, index, count).y) < 0.001)
+    }
+    assert.deepEqual(workCardPose(stop - interval * 0.25, index, count), middle)
   }
 })
