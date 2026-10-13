@@ -165,7 +165,7 @@ export default function App() {
         <SceneBoundary onError={onSceneError}>
         <Canvas
           shadows={false}
-          dpr={[1, 1.25]}
+          dpr={1}
           frameloop="demand"
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
           gl={{ antialias: true, stencil: false, depth: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}

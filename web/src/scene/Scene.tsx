@@ -127,9 +127,7 @@ function Man2({
   // mobilePullback：移动端相机沿「焦点→相机」方向拉远的倍率（1 = 不变，1.2 = 远 20%）
   // mobileTimelineShift：移动端「时间轴阶段」相机水平位移，单位=视距占比（正=左移，负=右移，0=关）
   const cam = {
-    // Seconds to close 63% of the gap; keep scroll following close to native movement.
-    response: 0.055,
-    dwell: 0.08,
+    dwell: 0,
     parallax: 4,
     parallaxEase: 0.1,
     mobilePullback: 1.2,
@@ -321,7 +319,6 @@ function Man2({
   useFrame((_, dt) => {
     // A demand-rendered scene can resume after minutes; do not jump its damping.
     dt = Math.min(dt, 0.05)
-    const a = 1 - Math.exp(-Math.max(0, dt) / cam.response)
 
     // 1) 由履历锚点（文档坐标）算连续索引 s：
     //    顶部 s≈-1，sysu 居中 s=0，hotsar=1 … zooop=4
@@ -359,8 +356,7 @@ function Man2({
         }
       }
     }
-    // 2) 帧驱动：先算"目标帧"（履历/作品统一，交界处两侧都是 RESUME_FRAMES → 连续），
-    //    再对最终帧做一次缓动——避免之前"平滑 s + 直读 rectTop"两路径不一致导致的瞬跳。
+    // Both sections share the same camera timeline and meet at RESUME_FRAMES.
     //    履历区 0–RESUME_FRAMES（节点 i→(i+1)·50）；作品区 = 入场（屏幕滑入）+ 首板块横移，直到末帧
     let frameTarget = THREE.MathUtils.clamp((sTarget + 1) * FRAMES_PER_NODE, 0, RESUME_FRAMES)
     let inWorks = false
@@ -386,10 +382,10 @@ function Man2({
         }
       }
     }
-    // 缓动程度随目标帧过渡：≤RESUME_FRAMES 正常平滑；入场段渐关；入场后 a=1（直接跟手、无 smooth）
+    // Fade the mobile timeline offset as the works section covers the scene.
     const smoothOff = THREE.MathUtils.smoothstep(frameTarget, RESUME_FRAMES, RESUME_FRAMES + WORKS_ENTRANCE)
-    const aEff = THREE.MathUtils.lerp(a, 1, smoothOff)
-    frameSmooth.current += (frameTarget - frameSmooth.current) * aEff
+    // Sample the authored camera directly from scroll; reversing never leaves a catch-up tail.
+    frameSmooth.current = frameTarget
     const frame = frameSmooth.current
     // 所有 clip 共享时间轴：time = frame/FPS，各自钳到自身时长
     // （较短的 clip 播完后保持末帧，相机 clip CameraAction 走满 totalFrames）

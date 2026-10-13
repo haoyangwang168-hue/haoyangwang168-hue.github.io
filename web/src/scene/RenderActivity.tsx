@@ -2,78 +2,82 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import type { MotionValue } from 'framer-motion'
 
-const SETTLE_MS = 3000
-const FRAME_INTERVAL_MS = 1000 / 30
-const MIN_SETTLE_FRAMES = 12
-const SCROLL_IDLE_MS = 150
+const SETTLE_MS = 1200
+const WARMUP_FRAMES = 12
 
-/** Pause portrait updates during scrolling and resume interactions at 30 fps. */
+/** Use the renderer's own frame loop; never debounce or cap scroll-driven rotation. */
 export default function RenderActivity({ coverProgress }: { coverProgress: MotionValue<number> }) {
   const invalidate = useThree(state => state.invalidate)
   const canvas = useThree(state => state.gl.domElement)
-  const renderedFrames = useRef(0)
+  const activity = useRef({ deadline: 0, active: false, frames: 0, last: 0, sampleMs: 0, samples: 0 })
 
-  useFrame(() => { renderedFrames.current += 1 })
+  useFrame(state => {
+    const current = activity.current
+    const now = performance.now()
+    if (document.hidden || coverProgress.get() >= 1) {
+      current.active = false
+      canvas.dataset.renderActivity = document.hidden ? 'hidden' : 'covered'
+      return
+    }
+    if (!current.active) return
+    current.frames += 1
+    if (current.frames > WARMUP_FRAMES && current.last > 0) {
+      current.sampleMs += now - current.last
+      current.samples += 1
+      if (current.samples >= 45) {
+        const averageMs = current.sampleMs / current.samples
+        canvas.dataset.portraitFrameMs = averageMs.toFixed(1)
+        // Lower pixel cost only after sustained slow frames, retaining the chosen level.
+        const dpr = state.viewport.dpr
+        const nextDpr = averageMs > 22 ? Math.max(0.65, Math.round((dpr - 0.15) * 100) / 100) : dpr
+        if (nextDpr !== dpr) state.setDpr(nextDpr)
+        canvas.dataset.portraitDpr = nextDpr.toFixed(2)
+        current.sampleMs = 0
+        current.samples = 0
+      }
+    }
+    current.last = now
+    if (now < current.deadline || current.frames < WARMUP_FRAMES) {
+      invalidate()
+    } else {
+      current.active = false
+      canvas.dataset.renderActivity = 'idle'
+    }
+  })
 
   useEffect(() => {
-    let deadline = 0
-    let frame = 0
-    let lastRender = -Infinity
-    let scrolling = false
-    let scrollTimer: ReturnType<typeof setTimeout> | undefined
-    const blocked = (): boolean => scrolling || document.hidden || coverProgress.get() >= 1
-    const stop = (): void => {
-      cancelAnimationFrame(frame)
-      frame = 0
-      canvas.dataset.renderActivity = document.hidden ? 'hidden' : coverProgress.get() >= 1 ? 'covered' : scrolling ? 'scrolling' : 'idle'
-    }
-    const tick = (now: number): void => {
-      frame = 0
-      // Shader compilation must not consume the entire initial settling budget.
-      if (blocked() || (now >= deadline && renderedFrames.current >= MIN_SETTLE_FRAMES)) {
-        stop()
+    const wake = (): void => {
+      const current = activity.current
+      if (document.hidden || coverProgress.get() >= 1) {
+        current.active = false
+        canvas.dataset.renderActivity = document.hidden ? 'hidden' : 'covered'
         return
       }
-      if (now - lastRender >= FRAME_INTERVAL_MS) {
-        // Carry the fractional remainder to avoid dropping to 20 fps on 60 Hz screens.
-        lastRender = Number.isFinite(lastRender) ? now - ((now - lastRender) % FRAME_INTERVAL_MS) : now
-        invalidate()
+      if (!current.active) {
+        current.frames = 0
+        current.last = 0
+        current.sampleMs = 0
+        current.samples = 0
       }
-      frame = requestAnimationFrame(tick)
-    }
-    const wake = (): void => {
-      if (blocked()) { stop(); return }
-      deadline = performance.now() + SETTLE_MS
-      renderedFrames.current = 0
+      current.active = true
+      current.deadline = performance.now() + SETTLE_MS
       canvas.dataset.renderActivity = 'active'
-      if (!frame) frame = requestAnimationFrame(tick)
+      invalidate()
     }
-    const pauseForScroll = (): void => {
-      scrolling = true
-      stop()
-      clearTimeout(scrollTimer)
-      scrollTimer = setTimeout(() => {
-        scrolling = false
-        scrollTimer = undefined
-        wake()
-      }, SCROLL_IDLE_MS)
-    }
-    // Wheel pauses before the next scroll paint; scroll also covers touch and keyboard input.
-    const scrollEvents = ['wheel', 'scroll'] as const
-    scrollEvents.forEach(event => window.addEventListener(event, pauseForScroll, { passive: true }))
-    const events = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel', 'resize', 'blur'] as const
+    const events = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel', 'scroll', 'resize'] as const
     events.forEach(event => window.addEventListener(event, wake, { passive: true }))
     document.addEventListener('visibilitychange', wake)
     const unsubscribe = coverProgress.on('change', wake)
     wake()
+    const current = activity.current
     return () => {
-      stop()
-      clearTimeout(scrollTimer)
-      scrollEvents.forEach(event => window.removeEventListener(event, pauseForScroll))
+      current.active = false
       events.forEach(event => window.removeEventListener(event, wake))
       document.removeEventListener('visibilitychange', wake)
       unsubscribe()
       delete canvas.dataset.renderActivity
+      delete canvas.dataset.portraitFrameMs
+      delete canvas.dataset.portraitDpr
     }
   }, [canvas, coverProgress, invalidate])
 
