@@ -9,7 +9,7 @@ import { FOCUS_POINTS, FRAMES_PER_NODE } from '../data/focusPoints'
 
 // Self-host the decoder so compressed models never depend on a Google download.
 useGLTF.setDecoderPath(`${import.meta.env.BASE_URL}draco/`)
-useGLTF.preload(`${import.meta.env.BASE_URL}models/me-fast.glb`)
+useGLTF.preload(`${import.meta.env.BASE_URL}models/me-web.glb`)
 
 // 聚焦锚点（glb 内 focus-* 空对象），顺序对应履历节点；名单是唯一真源，见 data/focusPoints.ts
 const POINTS = FOCUS_POINTS as readonly string[]
@@ -151,7 +151,7 @@ function Man2({
   }
 
   const get = useThree((s) => s.get)
-  const { scene, animations } = useGLTF(`${import.meta.env.BASE_URL}models/me-fast.glb`)
+  const { scene, animations } = useGLTF(`${import.meta.env.BASE_URL}models/me-web.glb`)
 
   // 克隆模型；收集眼睛对象、聚焦锚点对象、glb 自带相机、各锚点景深开关
   const { model, eyes, points, startPoint, glbCam, focusNode, dof } = useMemo(() => {

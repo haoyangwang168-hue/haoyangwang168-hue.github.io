@@ -122,6 +122,11 @@ export default function DissolveTransition({ mode = 'intro', containerRef, progr
       } else {
         const viewport = window.innerHeight
         const box = container.getBoundingClientRect()
+        // Once the paper covers the viewport, later cards and BUILD need no edge measurements.
+        if (box.bottom <= 0 || (value >= 1 && box.top < -viewport)) {
+          canvas.hidden = true
+          return
+        }
         const band = worksPaperBand(value, viewport,
           outgoing?.getBoundingClientRect().bottom ?? box.top - viewport * 0.22,
           Math.min(incoming?.getBoundingClientRect().top ?? Infinity,

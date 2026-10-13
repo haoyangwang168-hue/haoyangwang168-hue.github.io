@@ -55,3 +55,10 @@
   .pf-invitation h2 { font-size: 27px; line-height: 1.55; letter-spacing: .02em; }
   .pf-contact a { font-size: 21px; }
 }
+
+/* Each outline is rasterized once and moved as a compositor layer. */
+.pf-build-artwork { position: relative; width: 100%; height: 100%; max-width: 960px; max-height: 40svh; }
+.pf-echo-layer { position: absolute; inset: 0; pointer-events: none; transform-origin: 50% 45.4545%; will-change: transform; }
+.pf-build .pf-build-artwork svg { width: 100%; height: 100%; max-width: none; max-height: none; display: block; }
+.pf-build-artwork > svg { position: relative; }
+@media (max-width: 640px) { .pf-build-artwork { max-height: 26svh; } }

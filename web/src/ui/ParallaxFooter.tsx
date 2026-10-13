@@ -16,13 +16,10 @@ const BUILD_PATH = 'M65 100H145C232 100 237 182 163 196C252 204 247 300 151 300H
 const I_SERIFS = 'M423 100H477V103H423Z M423 297H477V300H423Z'
 const I_PATH = 'M423 100H477V103H458V297H477V300H423V297H442V103H423Z'
 function EchoLayer({ index, progress, reduced }: { index: number; progress: MotionValue<number>; reduced: boolean }) {
-  const group = useRef<SVGGElement>(null)
-  const transform = useTransform(progress, (p) => {
-    const pose = footerPose(p, index)
-    return `translate(450 ${200 + pose.y}) scale(${pose.scale}) translate(-450 -200)`
-  })
-  useMotionValueEvent(transform, 'change', (value) => group.current?.setAttribute('transform', value))
-  return <g ref={group} style={{ display: reduced ? 'none' : undefined, opacity: 0.4 + index * 0.07 }} transform={transform.get()} className="pf-echo"><path d={BUILD_PATH} fillRule="evenodd" /><path d={I_PATH} /></g>
+  const y = useTransform(progress, p => `${footerPose(p, index).y / 440 * 100}%`)
+  const scale = useTransform(progress, p => footerPose(p, index).scale)
+  // Move cached HTML layers instead of repainting five transformed SVG path groups.
+  return <motion.div className="pf-echo-layer" aria-hidden="true" style={{ y, scale, display: reduced ? 'none' : undefined, opacity: 0.4 + index * 0.07 }}><svg viewBox="0 0 900 440"><g className="pf-echo"><path d={BUILD_PATH} fillRule="evenodd" /><path d={I_PATH} /></g></svg></motion.div>
 }
 /** Scroll owns the reversible timeline; no wheel interception or timers. */
 export default function ParallaxFooter({ lang }: ParallaxFooterProps) {
@@ -65,13 +62,13 @@ export default function ParallaxFooter({ lang }: ParallaxFooterProps) {
       <div className="pf-sticky">
         <div className="pf-topline"><p>{copy.chapter}</p><span>GUANGZHOU, CN</span></div>
         <div className="pf-invitation"><h2 id="footer-invitation">{copy.headline.map((line) => <span key={line}>{line}</span>)}</h2><div className="pf-contact"><p>{copy.contact}</p><a href="tel:+8619120353235" aria-label={`${copy.phone} · 191 2035 3235`}>191 2035 3235 ↗</a></div></div>
-        <motion.div className="pf-build" style={{ '--pf-button-stroke': mobileStroke } as import('framer-motion').MotionStyle}><svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
-          <g aria-hidden="true">{[0, 1, 2, 3, 4].map((index) => <EchoLayer key={index} index={index} progress={progress} reduced={reduced} />)}<g ref={front} transform={frontTransform.get()} className="pf-build-front"><path d={BUILD_PATH} fillRule="evenodd" /></g></g>
+        <motion.div className="pf-build" style={{ '--pf-button-stroke': mobileStroke } as import('framer-motion').MotionStyle}><div className="pf-build-artwork">{[0, 1, 2, 3, 4].map((index) => <EchoLayer key={index} index={index} progress={progress} reduced={reduced} />)}<svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
+          <g aria-hidden="true"><g ref={front} transform={frontTransform.get()} className="pf-build-front"><path d={BUILD_PATH} fillRule="evenodd" /></g></g>
           <motion.a href="#contact-info" onClick={event => { event.preventDefault(); setContactOpen(true) }} aria-label={lang === 'zh' ? '打开联系方式' : 'Open contact details'} aria-haspopup="dialog" className="pf-morph-link">
             <g ref={letter} transform={letterTransform.get()}><motion.path d={I_SERIFS} style={{ opacity: serifOpacity }} /><motion.rect x={letterX} y="100" width={letterWidth} height="200" /></g>
             <motion.text x="450" y="371" textAnchor="middle" dominantBaseline="middle" style={{ opacity: reduced ? 1 : labelOpacity }} aria-hidden="true">{copy.button}</motion.text>
           </motion.a>
-        </svg></motion.div>
+        </svg></div></motion.div>
         <div className="pf-bottomline"><span>© {new Date().getFullYear()} HAOYANG WANG<br />{copy.note}</span><button type="button" className="pf-back" onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' })}>{copy.back} ↑</button></div>
       </div>
       {contactOpen && <ContactDialog lang={lang} onClose={closeContact} />}

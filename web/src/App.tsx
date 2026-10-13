@@ -182,7 +182,7 @@ export default function App() {
       </div>
       {sceneFailed && (
         <button className="scene-retry" onClick={() => {
-          useGLTF.clear(`${import.meta.env.BASE_URL}models/me-fast.glb`)
+          useGLTF.clear(`${import.meta.env.BASE_URL}models/me-web.glb`)
           setSceneFailed(false)
         }}>
           {lang === 'zh' ? '重新加载 3D' : 'Reload 3D'}
