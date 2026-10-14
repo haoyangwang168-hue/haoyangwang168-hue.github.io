@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent, type SyntheticEvent } from 'react'
 import type { WorkImage } from '../data/workMedia'
 import { responsiveImage } from '../data/responsiveImage'
-import { advanceGalleryMotion, galleryFrames, galleryImageScale, galleryWheelStep, galleryWheelTarget, GALLERY_SLOTS, wrapIndex } from './gallery-math'
+import { createGalleryImageSlot } from './gallery-image-slot'
+import { advanceGalleryMotion, galleryFrames, galleryImageScale, gallerySlot, galleryWheelStep, galleryWheelTarget, GALLERY_SLOTS, wrapIndex } from './gallery-math'
 import { usePrefersReducedMotion } from './useParallax'
 import './image-gallery.css'
 
@@ -22,6 +23,7 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
   const drag = useRef<{ id: number; x: number; origin: number; moved: boolean } | null>(null)
   const draggedUntil = useRef(0)
   const wake = useRef<() => void>(() => {})
+  const retryGallery = useRef<() => void>(() => {})
   const [selected, setSelected] = useState(0)
   const [expanded, setExpanded] = useState(false)
   const [stopped, setStopped] = useState(false)
@@ -41,10 +43,11 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
     setHasImageError(true)
   }
   const retryImages = (): void => {
+    retryGallery.current()
     for (const picture of failedImages.current) {
       if (!picture.isConnected) failedImages.current.delete(picture)
       // Use the live URL: recycled slots may now represent a different photograph.
-      else picture.setAttribute('src', picture.src)
+      else if (!picture.dataset.galleryPreview) picture.setAttribute('src', picture.src)
     }
     setHasImageError(failedImages.current.size > 0)
     wake.current()
@@ -73,7 +76,13 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
     let width = stage.clientWidth
     let height = stage.clientHeight
     let baseWidth = Math.min(width, height * 0.8)
-    const layers = slots.current.map(button => ({ button, picture: button?.querySelector('img') }))
+    const layers = slots.current.map(button => ({ button, loader: button ? createGalleryImageSlot(button, (picture, state) => {
+      if (state === 'error') failedImages.current.add(picture)
+      else failedImages.current.delete(picture)
+      setHasImageError(failedImages.current.size > 0)
+      if (state === 'ready' || state === 'error') wake.current()
+    }) : null }))
+    retryGallery.current = () => { layers.forEach(layer => layer.loader?.retry()) }
     const sizeLayers = () => {
       baseWidth = Math.min(width, height * 0.8)
       for (const { button } of layers) {
@@ -108,30 +117,29 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
         velocity.current = next.velocity
         // Removing a whole image cycle preserves every position and avoids precision loss.
         if (Math.abs(current.current) > images.length * 100) {
-          const cycle = Math.trunc(current.current / images.length) * images.length
+          const period = images.length * GALLERY_SLOTS
+          const cycle = Math.trunc(current.current / period) * period
           current.current -= cycle
           target.current -= cycle
           if (drag.current) drag.current.origin -= cycle
         }
         const frames = galleryFrames(current.current, width, height, images.length)
         let featured = 0
-        for (const [slot, box] of frames.entries()) {
-          const { button, picture } = layers[slot]
+        for (const [order, box] of frames.entries()) {
+          const { button, loader } = layers[gallerySlot(current.current, order)]
           if (!button) continue
           const onscreen = box.left < width && box.left + box.width > 0
           button.style.visibility = onscreen ? 'visible' : 'hidden'
-          if (!onscreen) continue
+          // Prepare one neighbour on each side before it enters, without loading all slots.
+          const nearby = box.left < width * 1.6 && box.left + box.width > -width * 0.2
+          if (!nearby) continue
           const asset = images[box.index]
-          if (button.dataset.imageIndex !== String(box.index)) {
-            button.dataset.imageIndex = String(box.index)
-            button.setAttribute('aria-label', asset.alt)
-            if (picture) {
-              const preview = responsiveImage(asset.src)
-              picture.srcset = preview.srcSet ?? ''
-              picture.src = preview.src
-              picture.alt = asset.alt
-            }
-          }
+          button.dataset.imageIndex = String(box.index)
+          button.setAttribute('aria-label', asset.alt)
+          const preview = responsiveImage(asset.src)
+          loader?.assign({ src: preview.src, srcSet: preview.srcSet, alt: asset.alt })
+          if (!onscreen) continue
+          const picture = loader?.image()
           button.style.transform = `translate3d(${box.left}px, 0, 0) scale(${box.width / baseWidth}, ${box.height / height})`
           if (picture) {
             const aspect = picture.naturalWidth && picture.naturalHeight ? picture.naturalWidth / picture.naturalHeight : 1
@@ -161,6 +169,8 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
       observer.disconnect()
       resize.disconnect()
       wake.current = () => {}
+      retryGallery.current = () => {}
+      layers.forEach(layer => layer.loader?.dispose())
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [images, still])
@@ -238,8 +248,8 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
               setExpanded(true)
             }}
           >
-            {/* Visible recycled slots receive their preview source in the draw loop. */}
-            <img sizes="(max-width: 640px) 90vw, 60vw" alt={images[slot % images.length].alt} draggable={false} decoding="async" onLoad={imageLoaded} onError={imageFailed} />
+            <span className="image-flow-placeholder image-flow-placeholder--loading">{zh ? '图片加载中…' : 'Loading image…'}</span>
+            <span className="image-flow-placeholder image-flow-placeholder--error">{zh ? '图片加载失败，请重试' : 'Image unavailable. Please retry.'}</span>
           </button>
         ))}
         <span className="image-flow-hint" aria-hidden="true">{zh ? '拖动或滚轮探索 ↔' : 'Drag or scroll to explore ↔'}</span>

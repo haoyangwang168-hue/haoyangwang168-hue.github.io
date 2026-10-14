@@ -10,6 +10,11 @@ const GROWTH = 0.32
 const RATIO = Math.exp(GROWTH)
 export const GALLERY_SLOTS = 10
 
+/** Tie each stream item to a physical node until that item has left the visible window. */
+export function gallerySlot(progress: number, order: number): number {
+  return wrapIndex(Math.floor(-progress) + order, GALLERY_SLOTS)
+}
+
 /** Accumulate wheel bursts, but discard an unfinished destination when direction reverses. */
 export function galleryWheelTarget(current: number, target: number, step: number): number {
   if (![current, target, step].every(Number.isFinite)) return Number.isFinite(current) ? current : 0
