@@ -1,6 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { advanceProfileAxis, profileCardAim, profileCardPose, type ProfileAxis } from './profile-card-motion'
-import { usePrefersReducedMotion } from './useParallax'
+import { useMobileInput, usePrefersReducedMotion } from './useParallax'
 import './profile-card.css'
 
 interface ProfileCardProps {
@@ -17,6 +17,7 @@ interface ProfileCardProps {
 export default function ProfileCard({ children, className = '', enabled = true, tiltStrength = 10, parallax = 6, holo = 0.6, glare = 0.28 }: ProfileCardProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
+  const mobile = useMobileInput()
 
   useEffect(() => {
     const root = rootRef.current
@@ -48,7 +49,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       style.setProperty('--pc-tilt', pose.tilt.toFixed(4))
     }
     write()
-    if (!enabled || reduced) return
+    if (!enabled || reduced || mobile) return
 
     const frame = (now: number): void => {
       frameId = null
@@ -148,7 +149,7 @@ export default function ProfileCard({ children, className = '', enabled = true, 
       light = 0
       write()
     }
-  }, [enabled, reduced, tiltStrength, parallax])
+  }, [enabled, reduced, mobile, tiltStrength, parallax])
 
   const style = {
     '--pc-holo': Number.isFinite(holo) ? Math.max(0, Math.min(1, holo)) : 0.6,

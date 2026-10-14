@@ -3,6 +3,18 @@ import { useTransform, type MotionValue } from 'framer-motion'
 
 const COMPACT_QUERY = '(max-width: 640px)'
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
+const MOBILE_INPUT_QUERY = '(max-width: 640px), (pointer: coarse)'
+
+function subscribeMobileInput(onChange: () => void): () => void {
+  const query = window.matchMedia(MOBILE_INPUT_QUERY)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+
+/** Prefer native gestures on small screens and primary touch devices. */
+export function useMobileInput(): boolean {
+  return useSyncExternalStore(subscribeMobileInput, () => window.matchMedia(MOBILE_INPUT_QUERY).matches, () => false)
+}
 export const VERTICAL_GALLERY_QUERY = '(max-width: 900px), (max-height: 720px)'
 
 function subscribeGallery(onChange: () => void): () => void {

@@ -13,7 +13,7 @@ import RevealHeading from './ui/RevealHeading'
 import ExploreNav from './ui/ExploreNav'
 import ParallaxFooter from './ui/ParallaxFooter'
 import { EDITORIAL_EASE } from './ui/motion-config'
-import { useParallaxLayer, usePrefersReducedMotion } from './ui/useParallax'
+import { useMobileInput, useParallaxLayer, usePrefersReducedMotion } from './ui/useParallax'
 import { SceneBoundary } from './ui/SceneBoundary'
 import DissolveTransition from './ui/DissolveTransition'
 import ClickSpark from './ui/ClickSpark'
@@ -121,7 +121,8 @@ export default function App() {
   const reduced = usePrefersReducedMotion()
   const onSceneError = useCallback(() => setSceneFailed(true), [])
   const onPaperDissolveUnavailable = useCallback(() => setPaperDissolveAvailable(false), [])
-  const paperDissolveEnabled = paperDissolveAvailable && !reduced && !sceneFailed
+  const mobile = useMobileInput()
+  const paperDissolveEnabled = paperDissolveAvailable && !reduced && !sceneFailed && !mobile
   const { scrollY } = useScroll()
   // 作品区蒙层：以作品区顶部从视口底进入到视口中部的进度，驱动 3D 渐暗 + 模糊
   const worksRef = useRef<HTMLElement>(null)
@@ -165,7 +166,7 @@ export default function App() {
         <SceneBoundary onError={onSceneError}>
         <Canvas
           shadows={false}
-          dpr={1}
+          dpr={mobile ? 0.8 : 1}
           frameloop="demand"
           camera={{ position: [0, 5, 19], fov: 39, near: 0.1, far: 500 }}
           gl={{ antialias: true, stencil: false, depth: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}

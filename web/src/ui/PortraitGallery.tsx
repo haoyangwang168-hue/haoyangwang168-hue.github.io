@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { portraitInertia, portraitParallax, portraitPosition } from './portrait-math'
 import { galleryWheelStep } from './gallery-math'
-import { useIsCompact, usePrefersReducedMotion } from './useParallax'
+import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import './portrait-gallery.css'
 
 const PHOTOS = ['haoyang-sunglasses.jpg', 'haoyang-portrait.jpg', 'haoyang-coast.jpg', 'haoyang-outdoors.jpg']
@@ -34,6 +34,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
   const [selected, setSelected] = useState<number | null>(null)
   const reduced = usePrefersReducedMotion()
   const compact = useIsCompact()
+  const native = useMobileInput()
   // Keep moving while the gallery is visible, not just before photos appear.
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] })
   const strength = reduced ? 0 : compact ? 0.65 : 1
@@ -51,15 +52,15 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
     'inset(0% 0 0% 0 round 0vw 0vw 0vw 0vw)',
     'inset(0% 0 30% 0 round 0vw 0vw 12vw 12vw)',
   ])
-  const titleLayer = { y: titleY }
-  const photoLayer = { y: photoY, scale: reduced ? 1 : photoScale, opacity: reduced ? 1 : photoOpacity }
+  const titleLayer = { y: native ? 0 : titleY }
+  const photoLayer = native ? {} : { y: photoY, scale: reduced ? 1 : photoScale, opacity: reduced ? 1 : photoOpacity }
   const viewing = selected !== null
   const zh = lang === 'zh'
   const photoUrl = (index: number): string => `${import.meta.env.BASE_URL}media/${PHOTOS[index]}`
 
   useEffect(() => {
     const stage = stageRef.current
-    if (!stage || reduced || viewing) return
+    if (!stage || reduced || viewing || native) return
     const cards = Array.from(stage.querySelectorAll<HTMLButtonElement>('.portrait-card'))
     const pictures = cards.map(card => card.querySelector('img'))
     let frame = 0
@@ -135,7 +136,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
       drag.current = null
       delete stage.dataset.dragging
     }
-  }, [reduced, viewing])
+  }, [reduced, viewing, native])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -166,16 +167,22 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
     wake.current()
   }
   const navigate = (direction: number): void => {
+    if (native) {
+      const stage = stageRef.current
+      const card = stage?.querySelector<HTMLElement>('.portrait-card')
+      if (stage && card) stage.scrollBy({ left: -direction * (card.offsetWidth + 16), behavior: reduced ? 'instant' : 'smooth' })
+      return
+    }
     velocity.current = direction * strideRef.current * 8
     wake.current()
   }
   return <section ref={sectionRef} className="portraits" aria-label={zh ? '我的照片' : 'My photographs'}>
-    <motion.div className="portrait-surface" style={{ clipPath: reduced ? undefined : surfaceClip }} aria-hidden="true" />
+    <motion.div className="portrait-surface" style={{ clipPath: reduced || native ? undefined : surfaceClip }} aria-hidden="true" />
     <motion.header style={titleLayer} data-parallax-layer="portrait-title"><motion.span style={{ opacity: reduced ? 1 : labelOpacity }}>BEHIND THE AVATAR / 01—04</motion.span><motion.h2 style={{ opacity: reduced ? 1 : headingOpacity }}>{zh ? '这就是我。' : 'This is me.'}</motion.h2><motion.p style={{ opacity: reduced ? 1 : bodyOpacity }}>{zh ? '生活里的几个瞬间。左右拖动或滚动鼠标探索，点击照片放大。' : 'A few moments from life. Drag or use the mouse wheel to explore. Click a photo to take a closer look.'}</motion.p></motion.header>
     <motion.div className="portrait-photo-layer" style={photoLayer} data-parallax-layer="portrait-photos">
-      <div ref={stageRef} className={`portrait-stage${reduced ? ' portrait-stage--still' : ''}`}
+      <div key={native ? 'native' : 'recycled'} ref={stageRef} className={`portrait-stage${reduced ? ' portrait-stage--still' : native ? ' portrait-stage--native' : ''}`}
         onPointerDown={event => {
-          if (!event.isPrimary || event.button !== 0 || reduced) return
+          if (!event.isPrimary || event.button !== 0 || reduced || native) return
           velocity.current = 0
           target.current = offset.current
           drag.current = { id: event.pointerId, startX: event.clientX, lastX: event.clientX, time: performance.now(), moved: false }
@@ -200,7 +207,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
         onPointerUp={event => finishDrag(event.pointerId)}
         onPointerCancel={event => { velocity.current = 0; finishDrag(event.pointerId) }}
         onLostPointerCapture={event => finishDrag(event.pointerId)}>
-        {Array.from({ length: reduced ? 4 : 12 }, (_, index) => <button type="button" className="portrait-card" key={index}
+        {Array.from({ length: reduced || native ? 4 : 12 }, (_, index) => <button type="button" className="portrait-card" key={index}
           aria-label={`${zh ? '放大照片' : 'View photograph'}: ${LABELS[lang][index % 4]}`}
           onClick={event => {
             if (event.detail > 0 && performance.now() < suppressClickUntil.current) return

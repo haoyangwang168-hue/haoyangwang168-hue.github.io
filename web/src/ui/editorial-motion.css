@@ -10,7 +10,7 @@ html { position: relative; }
 .content:has(.wk-detail) { z-index: 100; }
 
 /* Leave the centre open for the original portrait. */
-.hero { min-height: 100svh; padding: 160px 6% 116px; align-items: stretch; }
+.hero { min-height: 100svh; padding: 160px 6% 116px; align-items: stretch; touch-action: pan-y pinch-zoom; }
 .hero::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, rgba(10,10,13,.72), rgba(10,10,13,.46) 22%, transparent 41%, transparent 60%, rgba(10,10,13,.46) 82%, rgba(10,10,13,.72)), linear-gradient(0deg, rgba(10,10,13,.2), transparent 26%); mask-image: linear-gradient(transparent, #000 42%, #000 calc(100% - 120px), transparent); }
 .hero .about { width: 100%; max-width: 1600px; padding: 0; margin: 0 auto; }
 .about-intro { display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 28%); justify-content: space-between; align-items: end; animation: none; }

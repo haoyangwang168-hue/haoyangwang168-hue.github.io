@@ -64,7 +64,14 @@ export default function RenderActivity({ coverProgress }: { coverProgress: Motio
       canvas.dataset.renderActivity = 'active'
       invalidate()
     }
-    const events = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel', 'scroll', 'resize'] as const
+    // Touch gestures on foreground content do not change the portrait camera.
+    const pointer = (event: PointerEvent): void => {
+      if (event.pointerType !== 'mouse' && event.target instanceof Element && event.target.closest('.portraits, .works, .parallax-footer')) return
+      wake()
+    }
+    const pointerEvents = ['pointermove', 'pointerdown', 'pointerup', 'pointercancel'] as const
+    pointerEvents.forEach(event => window.addEventListener(event, pointer, { passive: true }))
+    const events = ['scroll', 'resize'] as const
     events.forEach(event => window.addEventListener(event, wake, { passive: true }))
     document.addEventListener('visibilitychange', wake)
     const unsubscribe = coverProgress.on('change', wake)
@@ -72,6 +79,7 @@ export default function RenderActivity({ coverProgress }: { coverProgress: Motio
     const current = activity.current
     return () => {
       current.active = false
+      pointerEvents.forEach(event => window.removeEventListener(event, pointer))
       events.forEach(event => window.removeEventListener(event, wake))
       document.removeEventListener('visibilitychange', wake)
       unsubscribe()

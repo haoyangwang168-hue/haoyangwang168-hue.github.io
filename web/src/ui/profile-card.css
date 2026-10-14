@@ -87,3 +87,8 @@
   .profile-card__body, .scroll-work-profile .scroll-work-cover img { transform: none; }
   .profile-card__holo, .profile-card__glare, .profile-card__shade { display: none; }
 }
+
+/* Scrolling fingers must not trigger moving foil or extra blend surfaces. */
+@media (max-width: 640px), (pointer: coarse) {
+  .profile-card__holo, .profile-card__glare, .profile-card__shade { display: none; }
+}

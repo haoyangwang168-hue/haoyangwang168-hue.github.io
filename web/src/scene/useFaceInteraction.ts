@@ -101,10 +101,6 @@ export function useFaceInteraction(model: THREE.Object3D) {
     const up = (event: PointerEvent): void => { if (event.pointerId === input.current.id) release() }
     const cancel = (event: KeyboardEvent): void => { if (event.key === 'Escape') release() }
     const scroll = (): void => { if (!active()) release() }
-    const touch = (event: TouchEvent): void => {
-      const finger = event.touches[0]
-      if (finger && !blocked(event.target) && pick(finger.clientX, finger.clientY)) event.preventDefault()
-    }
     window.addEventListener('pointerdown', down, { passive: false })
     window.addEventListener('pointermove', move, { passive: false })
     window.addEventListener('pointerup', up)
@@ -112,7 +108,6 @@ export function useFaceInteraction(model: THREE.Object3D) {
     window.addEventListener('blur', release)
     window.addEventListener('keydown', cancel)
     window.addEventListener('scroll', scroll, { passive: true })
-    window.addEventListener('touchstart', touch, { passive: false })
     return () => {
       window.removeEventListener('pointerdown', down)
       window.removeEventListener('pointermove', move)
@@ -121,7 +116,6 @@ export function useFaceInteraction(model: THREE.Object3D) {
       window.removeEventListener('blur', release)
       window.removeEventListener('keydown', cancel)
       window.removeEventListener('scroll', scroll)
-      window.removeEventListener('touchstart', touch)
       originals.forEach(({ mesh, material, copies }) => { mesh.material = material; copies.forEach(copy => copy.dispose()) })
       geometries.forEach(({ mesh, source, copy }) => { mesh.geometry = source; copy.dispose() })
     }
