@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react'
 import { useMotionValue, type MotionValue } from 'framer-motion'
-import { workTouchScroll } from './work-touch.ts'
+import { workTouchScroll, workTouchSnap } from './work-touch.ts'
 
 interface Geometry { top: number; range: number; cardHeight: number }
 interface Drag extends Geometry {
@@ -13,6 +13,8 @@ interface Drag extends Geometry {
   target: number
   moved: boolean
   pageOutside: boolean
+  startProgress: number
+  travel: number
 }
 
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
@@ -22,6 +24,9 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
   let drag: Drag | null = null
   let suppressClickUntil = 0
   let scrollFrame: number | null = null
+  let settleFrame: number | null = null
+  let settling = false
+  let committedScroll: number | null = null
   const measure = (): Geometry => ({
     top: gallery.getBoundingClientRect().top + window.scrollY,
     // Match document geometry, not the sticky stage's small-viewport height.
@@ -29,7 +34,10 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     cardHeight: deck.offsetHeight,
   })
   const followPage = (): void => {
-    if (drag) return
+    if (drag || settling) return
+    // Preserve the exact settled pose through our own scroll event and pixel rounding.
+    if (committedScroll !== null && Math.abs(window.scrollY - committedScroll) <= 1) return
+    committedScroll = null
     const geometry = measure()
     progress.set(geometry.range > 0 ? clamp((window.scrollY - geometry.top) / geometry.range) : 0)
   }
@@ -38,25 +46,59 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     scrollFrame = null
   }
   const onScroll = (): void => {
-    if (drag || scrollFrame !== null) return
+    if (drag || settling || scrollFrame !== null) return
     scrollFrame = window.requestAnimationFrame(() => {
       scrollFrame = null
       // Read current geometry rather than replaying a previously sampled progress.
       followPage()
     })
   }
-  const end = (): void => {
+  const commit = (target: number): void => {
+    window.scrollTo({ top: target, behavior: 'instant' })
+    committedScroll = window.scrollY
+  }
+  const stopSettling = (): void => {
+    if (settleFrame !== null) window.cancelAnimationFrame(settleFrame)
+    settleFrame = null
+    if (settling) {
+      const geometry = measure()
+      commit(geometry.top + progress.get() * geometry.range)
+    }
+    settling = false
+  }
+  const end = (snap = false): void => {
     if (!drag) return
     const finished = drag
     if (finished.moved) {
       suppressClickUntil = performance.now() + 750
-      window.scrollTo({ top: finished.target, behavior: 'instant' })
+      if (snap && !finished.pageOutside) {
+        const from = progress.get()
+        const to = workTouchSnap(finished.startProgress, finished.travel, finished.cardHeight, count)
+        settling = true
+        drag = null
+        let started: number | null = null
+        const tick = (now: number): void => {
+          if (started === null) started = now
+          const t = Math.min(1, (now - started) / 280)
+          progress.set(from + (to - from) * (1 - (1 - t) ** 3))
+          if (t < 1) { settleFrame = window.requestAnimationFrame(tick); return }
+          settleFrame = null
+          const geometry = measure()
+          commit(geometry.top + to * geometry.range)
+          settling = false
+          suppressClickUntil = performance.now() + 350
+        }
+        settleFrame = window.requestAnimationFrame(tick)
+        return
+      }
+      commit(finished.target)
     }
     drag = null
     followPage()
   }
   const start = (event: TouchEvent): void => {
     end()
+    stopSettling()
     suppressClickUntil = 0
     if (event.touches.length !== 1) return
     const geometry = measure()
@@ -64,9 +106,11 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     if (geometry.range <= 0 || geometry.cardHeight <= 0 || window.scrollY < geometry.top || window.scrollY > geometry.top + geometry.range) return
     cancelScrollFrame()
     const touch = event.touches[0]
-    const scroll = window.scrollY
+    const retained = committedScroll !== null && Math.abs(window.scrollY - committedScroll) <= 1
+    const scroll = retained ? geometry.top + progress.get() * geometry.range : window.scrollY
+    if (retained && Math.abs(scroll - window.scrollY) > 1) commit(scroll)
     progress.set(clamp((scroll - geometry.top) / geometry.range))
-    drag = { ...geometry, id: touch.identifier, x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastY: touch.clientY, scroll, target: scroll, moved: false, pageOutside: false }
+    drag = { ...geometry, id: touch.identifier, x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastY: touch.clientY, scroll, target: scroll, moved: false, pageOutside: false, startProgress: progress.get(), travel: 0 }
   }
   const move = (event: TouchEvent): void => {
     if (!drag) return
@@ -76,6 +120,7 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     const delta = drag.y - touch.clientY
     if (!drag.moved && Math.abs(touch.clientX - drag.x) >= 5 && Math.abs(touch.clientX - drag.x) > Math.abs(delta)) { end(); return }
     event.preventDefault()
+    drag.travel += drag.lastY - touch.clientY
     drag.lastX = touch.clientX
     drag.lastY = touch.clientY
     if (!drag.moved && Math.abs(delta) < 5) return
@@ -104,26 +149,34 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
       suppressClickUntil = 0
     }
   }
+  const release = (): void => { end(true) }
+  const cancel = (): void => { end(); stopSettling() }
+  const interrupt = (): void => { stopSettling(); committedScroll = null }
   followPage()
   stage.addEventListener('touchstart', start, { passive: true })
   stage.addEventListener('touchmove', move, { passive: false })
-  stage.addEventListener('touchend', end, { passive: true })
-  stage.addEventListener('touchcancel', end, { passive: true })
+  stage.addEventListener('touchend', release, { passive: true })
+  stage.addEventListener('touchcancel', cancel, { passive: true })
   stage.addEventListener('click', click, true)
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', resize)
-  window.addEventListener('blur', end)
+  window.addEventListener('blur', cancel)
+  window.addEventListener('wheel', interrupt, { passive: true })
+  window.addEventListener('keydown', interrupt)
   return () => {
     end()
+    stopSettling()
     cancelScrollFrame()
     stage.removeEventListener('touchstart', start)
     stage.removeEventListener('touchmove', move)
-    stage.removeEventListener('touchend', end)
-    stage.removeEventListener('touchcancel', end)
+    stage.removeEventListener('touchend', release)
+    stage.removeEventListener('touchcancel', cancel)
     stage.removeEventListener('click', click, true)
     window.removeEventListener('scroll', onScroll)
     window.removeEventListener('resize', resize)
-    window.removeEventListener('blur', end)
+    window.removeEventListener('blur', cancel)
+    window.removeEventListener('wheel', interrupt)
+    window.removeEventListener('keydown', interrupt)
   }
 }
 

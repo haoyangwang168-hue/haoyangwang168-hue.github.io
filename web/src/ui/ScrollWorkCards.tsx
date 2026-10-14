@@ -20,10 +20,22 @@ function Card({ section, index, count, progress, data, onOpen, reduced, mobile }
     let previousHidden: boolean | undefined
     let previousFront: boolean | undefined
     let previousTabIndex: number | undefined
+    let previousBackVisible: boolean | undefined
+    if (!mobile) {
+      frontRef.current?.style.removeProperty('visibility')
+      backRef.current?.style.removeProperty('visibility')
+    }
     const update = (): void => {
       const current = pose.get()
       const hidden = !reduced && !current.clickable
       const frontVisible = !reduced && index === 0 && current.rotateY < 90
+      const backVisible = reduced || (current.rotateY >= 90 && current.opacity > 0)
+      // Explicit face visibility avoids relying only on mobile 3D backface compositing.
+      if (mobile && backVisible !== previousBackVisible) {
+        if (frontRef.current) frontRef.current.style.visibility = backVisible ? 'hidden' : 'visible'
+        if (backRef.current) backRef.current.style.visibility = backVisible ? 'visible' : 'hidden'
+        previousBackVisible = backVisible
+      }
       if (cardRef.current) {
         if (hidden !== previousHidden) {
           cardRef.current.inert = hidden
@@ -49,7 +61,7 @@ function Card({ section, index, count, progress, data, onOpen, reduced, mobile }
     }
     update()
     return pose.on('change', update)
-  }, [pose, reduced, index])
+  }, [pose, reduced, index, mobile])
   const y = useTransform(pose, value => `${value.y}%`)
   const rotate = useTransform(pose, value => value.rotate)
   const rotateY = useTransform(pose, value => value.rotateY)

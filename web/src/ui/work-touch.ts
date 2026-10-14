@@ -1,5 +1,14 @@
 interface TouchStop { progress: number; distance: number }
 
+/** Snap to a stable front face, readable project, or completed outro after a short swipe. */
+export function workTouchSnap(start: number, delta: number, height: number, count: number): number {
+  if (![start, delta, height, count].every(Number.isFinite) || height <= 0 || count < 1 || !Number.isInteger(count)) return Number.isFinite(start) ? Math.max(0, Math.min(1, start)) : 0
+  const stops = [0, 0.12, ...Array.from({ length: count }, (_, index) => 0.315 + 0.65 * index / count), 1]
+  const p = Math.max(0, Math.min(1, start))
+  if (Math.abs(delta) < Math.min(110, height * 0.25)) return stops.reduce((nearest, stop) => Math.abs(stop - p) < Math.abs(nearest - p) ? stop : nearest)
+  return delta > 0 ? stops.find(stop => stop > p + 0.02) ?? 1 : [...stops].reverse().find(stop => stop < p - 0.02) ?? 0
+}
+
 /** Express the original flip poses in finger travel instead of document height. */
 function touchStops(count: number, height: number): TouchStop[] {
   const stops: TouchStop[] = [

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { workTouchScroll } from '../src/ui/work-touch.ts'
+import { workTouchScroll, workTouchSnap } from '../src/ui/work-touch.ts'
 import { workCardPose } from '../src/ui/portrait-math.ts'
 import { bindWorkCardTouch } from '../src/ui/useWorkCardTouch.ts'
 
@@ -94,8 +94,9 @@ function fixture(t, initial = 0.12) {
     start: y => stage.send('touchstart', { touches: [finger(y)] }),
     move: y => stage.send('touchmove', { touches: [finger(y)], cancelable: true, preventDefault: () => prevented++ }),
     end: () => stage.send('touchend'),
+    cancel: () => stage.send('touchcancel'),
     prevented: () => prevented,
-    flush: () => { const queued = [...frames.values()]; frames.clear(); queued.forEach(callback => callback()) },
+    flush: (now = 0) => { const queued = [...frames.values()]; frames.clear(); queued.forEach(callback => callback(now)) },
   }
 }
 
@@ -112,7 +113,7 @@ test('local drag ignores scroll notifications and performs zero page writes unti
   f.flush()
   near(f.progress.get(), 0.185)
   assert.equal(f.calls.length, 0)
-  f.end()
+  f.cancel()
   near(f.host.scrollY, at(0.185))
   near(f.progress.get(), 0.185)
   assert.equal(f.calls.length, 1)
@@ -136,7 +137,7 @@ test('viewport change preserves the pose and rebases the finger without cancelin
   f.move(300)
   near(f.progress.get(), 0.2175)
   assert.equal(f.calls.length, 0)
-  f.end()
+  f.cancel()
   near(f.host.scrollY, top + (9900 - 1000) * 0.2175)
   near(f.progress.get(), 0.2175)
   f.host.send('scroll')
@@ -148,13 +149,13 @@ test('reversal stays exact across repeated drags and a new gesture before scroll
   const f = fixture(t)
   f.start(600)
   f.move(400)
-  f.end()
+  f.cancel()
   f.start(400)
   f.move(600)
   near(f.progress.get(), 0.12)
   f.flush()
   near(f.progress.get(), 0.12)
-  f.end()
+  f.cancel()
   near(f.host.scrollY, at(0.12))
 })
 
@@ -168,7 +169,7 @@ test('only overflow beyond the gallery moves the page and reversing re-enters th
   f.move(600)
   near(f.progress.get(), 0.99)
   near(f.host.scrollY, at(0.99))
-  f.end()
+  f.cancel()
   near(f.host.scrollY, at(0.99))
 })
 
@@ -178,7 +179,7 @@ test('upward exit and pre-entry gestures preserve normal document scrolling', t 
   f.move(580)
   near(f.host.scrollY, top - 80)
   near(f.progress.get(), 0)
-  f.end()
+  f.cancel()
   const countBefore = f.calls.length
   f.start(500)
   f.move(450)
@@ -198,7 +199,7 @@ test('tap, drag-click suppression, cancellation, multitouch and cleanup remain s
   assert.equal(blocked, true)
   blocked = false
   f.start(600)
-  f.end()
+  f.cancel()
   f.stage.send('click', click)
   assert.equal(blocked, false)
   f.start(600)
@@ -220,4 +221,68 @@ test('ordinary chapter navigation updates mobile progress when no finger owns it
   f.host.send('scroll')
   f.flush()
   near(f.progress.get(), 0.7)
+})
+
+test('a quarter-card swipe selects exactly one next project; small gestures return', () => {
+  near(workTouchSnap(0.12, 100, 400, 5), 0.315)
+  near(workTouchSnap(0.315, 100, 400, 5), 0.445)
+  near(workTouchSnap(0.445, -100, 400, 5), 0.315)
+  near(workTouchSnap(0.315, 80, 400, 5), 0.315)
+  near(workTouchSnap(0.835, 100, 400, 5), 1)
+})
+
+test('short swipe settles one card in 280ms without page writes during animation', t => {
+  const f = fixture(t, 0.315)
+  f.start(600)
+  f.move(500)
+  const releaseProgress = f.progress.get()
+  f.end()
+  assert.equal(f.calls.length, 0)
+  f.flush(0)
+  f.flush(140)
+  assert.ok(f.progress.get() > releaseProgress && f.progress.get() < 0.445)
+  f.host.send('scroll')
+  assert.equal(f.calls.length, 0)
+  f.flush(280)
+  near(f.progress.get(), 0.445)
+  assert.equal(f.calls.length, 1)
+  near(f.host.scrollY, at(0.445))
+  // Self-generated scroll rounding and viewport resize cannot flash back to another pose.
+  f.host.scrollY += 0.4
+  f.documentRoot.clientHeight = 1000
+  f.host.send('scroll')
+  f.host.send('resize')
+  f.flush(300)
+  near(f.progress.get(), 0.445)
+})
+
+test('subthreshold swipe eases back and reversing switches to the previous project', t => {
+  const f = fixture(t, 0.445)
+  f.start(600)
+  f.move(550)
+  f.end()
+  f.flush(0)
+  f.flush(280)
+  near(f.progress.get(), 0.445)
+  f.start(500)
+  f.move(600)
+  f.end()
+  f.flush(300)
+  f.flush(580)
+  near(f.progress.get(), 0.315)
+})
+
+test('a new touch interrupts settling with no remaining animation callback', t => {
+  const f = fixture(t, 0.315)
+  f.start(600)
+  f.move(500)
+  f.end()
+  f.flush(0)
+  f.flush(100)
+  const mid = f.progress.get()
+  f.start(500)
+  near(f.progress.get(), mid)
+  assert.equal(f.frames.size, 0)
+  f.move(550)
+  assert.ok(f.progress.get() < mid)
 })
