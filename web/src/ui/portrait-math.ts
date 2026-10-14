@@ -21,7 +21,7 @@ export function portraitParallax(center: number, viewport: number, width: number
 }
 
 /** Match the reference sequence: enter, reveal the fan, then dismiss cards in order. */
-export function workCardPose(progress: number, index: number, count: number): { y: number; rotate: number; rotateY: number; opacity: number; active: boolean; clickable: boolean } {
+export function workCardPose(progress: number, index: number, count: number, mobile = false): { y: number; rotate: number; rotateY: number; opacity: number; active: boolean; clickable: boolean } {
   const clamp = (value: number): number => Math.max(0, Math.min(1, value))
   const p = clamp(Number.isFinite(progress) ? progress : 0)
   if (count <= 0 || index < 0 || index >= count) return { y: 0, rotate: 0, rotateY: 0, opacity: 0, active: false, clickable: false }
@@ -32,8 +32,9 @@ export function workCardPose(progress: number, index: number, count: number): { 
   const fan = clamp((p - 0.22) / 0.08)
   const spread = fan * fan * (3 - 2 * fan)
   const local = (p - 0.3) / 0.65 * count - index
-  // Keep a short reading stop, then distribute movement over most of the scroll.
-  const departure = clamp((local - 0.12) / 0.88)
+  // Touch scrolling gets a longer reading interval before the card starts leaving.
+  const hold = mobile ? 0.35 : 0.12
+  const departure = clamp((local - hold) / (1 - hold))
   // Let the next card rise into its reading position while its predecessor leaves.
   const arrival = clamp((local + 0.5) / 0.5)
   const approach = index > 0 ? (1 - arrival * arrival * (3 - 2 * arrival)) * spread : 0

@@ -1,12 +1,42 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getSectionStops, normalizeStops, horizontalCardStop } from '../src/ui/section-scroll.ts'
+import { workCardPose } from '../src/ui/portrait-math.ts'
 
 test('document limits collapse out-of-range stops and discard invalid geometry', () => {
   assert.deepEqual(normalizeStops([
     { id: 'footer', top: 3000 }, { id: 'start', top: -100 },
     { id: 'invalid', top: NaN }, { id: 'duplicate', top: 0.4 }, { id: 'middle', top: 800 },
   ], 2000), [{ id: 'start', top: 0 }, { id: 'middle', top: 800 }, { id: 'footer', top: 2000 }])
+})
+
+test('mobile chapter links land inside each extended card reading interval', (t) => {
+  const cards = Array.from({ length: 5 }, () => ({}))
+  const gallery = {
+    getBoundingClientRect: () => ({ top: 1800 }), offsetHeight: 10120,
+    dataset: { mobileTimeline: 'true' }, classList: { contains: () => false },
+    querySelectorAll: () => cards,
+  }
+  for (const [key, value] of Object.entries({
+    window: { innerHeight: 800, innerWidth: 390, scrollY: 200 },
+    document: { documentElement: { scrollHeight: 16000 }, querySelector: selector => selector === '[data-scroll-work-gallery]' ? gallery : null, querySelectorAll: () => [] },
+  })) {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, key)
+    Object.defineProperty(globalThis, key, { configurable: true, value })
+    t.after(() => {
+      if (previous) Object.defineProperty(globalThis, key, previous)
+      else delete globalThis[key]
+    })
+  }
+  const stops = getSectionStops(true).filter(stop => stop.id.startsWith('work-'))
+  assert.equal(stops.length, 5)
+  stops.forEach((stop, index) => {
+    assert.ok(Math.abs(stop.top - (4683.8 + index * 1107.6)) < 1e-8)
+    const pose = workCardPose((stop.top - 2000) / 8520, index, 5, true)
+    assert.equal(pose.active, true)
+    assert.equal(pose.opacity, 1)
+    assert.equal(pose.rotateY, 180)
+  })
 })
 
 test('invalid or short documents never produce negative navigation destinations', () => {

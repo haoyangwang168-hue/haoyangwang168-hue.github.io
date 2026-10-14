@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { SECTION_COVERS, type WorkSection, type WorkListItem, type WorksLang } from '../data/works'
-import { useIsCompact, usePrefersReducedMotion } from './useParallax'
+import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import { workOutroPose, workTimeline } from './work-outro'
 import { workCardPose } from './portrait-math'
 import { worksPageParallax } from './works-transition'
 import ProfileCard from './ProfileCard'
 import './scroll-work-cards.css'
 
-function Card({ section, index, count, progress, data, onOpen, reduced }: { section: WorkSection; index: number; count: number; progress: MotionValue<number>; data: WorksLang; onOpen: (item: WorkListItem) => void; reduced: boolean }) {
-  const pose = useTransform(progress, value => workCardPose(value, index, count))
+function Card({ section, index, count, progress, data, onOpen, reduced, mobile }: { section: WorkSection; index: number; count: number; progress: MotionValue<number>; data: WorksLang; onOpen: (item: WorkListItem) => void; reduced: boolean; mobile: boolean }) {
+  const pose = useTransform(progress, value => workCardPose(value, index, count, mobile))
   const cardRef = useRef<HTMLElement>(null)
   const frontRef = useRef<HTMLDivElement>(null)
   const backRef = useRef<HTMLDivElement>(null)
@@ -94,10 +94,11 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const galleryRef = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
   const compact = useIsCompact()
+  const mobile = useMobileInput()
   const entryY = useTransform(entryProgress, p => worksPageParallax(p, compact, reduced).incomingY)
   const deckY = useTransform(entryProgress, p => worksPageParallax(p, compact, reduced).deckY)
   const { scrollYProgress } = useScroll({ target: galleryRef, offset: ['start start', 'end end'] })
-  const timeline = workTimeline(data.sections.length)
+  const timeline = workTimeline(data.sections.length, mobile)
   const cardProgress = useTransform(scrollYProgress, p => Math.min(1, p / timeline.cardFraction))
   // Keep the invitation on the same native scroll timeline as the departing cards.
   const outroProgress = cardProgress
@@ -109,11 +110,11 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const headingDepartureY = useTransform(cardProgress, [0, 0.12], [0, -110])
   const headingY = useTransform(() => headingDepartureY.get() + entryY.get())
   const headingOpacity = useTransform(cardProgress, [0.04, 0.12], [1, 0])
-  return <div id="work-overview" ref={galleryRef} className={`scroll-work-gallery${reduced ? ' scroll-work-gallery--still' : ''}`} data-scroll-work-gallery style={{ height: reduced ? 'auto' : `${timeline.heightVh}svh` }}>
+  return <div id="work-overview" ref={galleryRef} className={`scroll-work-gallery${reduced ? ' scroll-work-gallery--still' : ''}`} data-scroll-work-gallery data-mobile-timeline={mobile} style={{ height: reduced ? 'auto' : `${timeline.heightVh}svh` }}>
     <div className="scroll-work-stage">
       <motion.header style={{ y: entryY }} data-works-incoming><span>A FEW THINGS I'VE MADE</span><span>SELECTED WORKS / 2026</span></motion.header>
       <motion.h2 className="scroll-work-title" style={reduced ? {} : { y: headingY, opacity: headingOpacity }}>SCROLL DOWN AND WATCH<br />EVERYTHING FALL INTO PLACE</motion.h2>
-      <motion.div className="scroll-work-deck" style={{ y: deckY }}>{data.sections.map((section, index) => <Card key={section.id} section={section} index={index} count={data.sections.length} progress={cardProgress} data={data} onOpen={onOpen} reduced={reduced} />)}</motion.div>
+      <motion.div className="scroll-work-deck" style={{ y: deckY }}>{data.sections.map((section, index) => <Card key={section.id} section={section} index={index} count={data.sections.length} progress={cardProgress} data={data} onOpen={onOpen} reduced={reduced} mobile={mobile} />)}</motion.div>
       <motion.div className="scroll-work-outro" style={reduced ? {} : { visibility: outroVisibility }}>
         <motion.p className="scroll-work-outro-caption" style={reduced ? {} : { opacity: outroOpacity }}>{lang === 'zh' ? '从我的作品，到我们的下一次创作' : 'FROM MY WORK, TO WHAT WE MAKE TOGETHER'}</motion.p>
         <h2><OutroLine text={lang === 'zh' ? '下一件作品，' : 'The next creation,'} index={0} progress={outroProgress} exitProgress={exitProgress} reduced={reduced} /><OutroLine text={lang === 'zh' ? '也许我们一起完成。' : 'could be ours.'} index={1} progress={outroProgress} exitProgress={exitProgress} reduced={reduced} /></h2>

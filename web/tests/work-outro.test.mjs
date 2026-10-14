@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { workOutroPose, workTimeline } from '../src/ui/work-outro.ts'
-import { workCardPose } from '../src/ui/portrait-math.ts'
+import { workCardPose, workCardStop } from '../src/ui/portrait-math.ts'
 
 test('invitation overlaps the departing last card and fills its former empty tail', () => {
   assert.equal(workOutroPose(0.8, 0).opacity, 0)
@@ -33,4 +33,25 @@ test('reading hold adds a full viewport without slowing down cards or moving the
     }
   }
   assert.deepEqual(workTimeline(NaN), workTimeline(0))
+})
+
+test('mobile cards have triple travel and a readable hold without changing desktop timing', () => {
+  const desktop = workTimeline(5)
+  const mobile = workTimeline(5, true)
+  // Five cards: 355vh becomes 1065vh, followed by the same 100vh invitation hold.
+  assert.equal(desktop.heightVh, 555)
+  assert.equal(mobile.heightVh, 1265)
+  const travel = (mobile.heightVh - 100) * mobile.cardFraction
+  assert.ok(Math.abs(travel - 1065) < 1e-10)
+  for (let index = 0; index < 5; index++) {
+    const start = workCardStop(index, 5)
+    const resting = workCardPose(start + 0.015, index, 5, true)
+    // A 25vh movement from the navigation stop still stays within the reading hold.
+    assert.deepEqual(workCardPose(start + 0.015 + 25 / travel, index, 5, true), resting)
+    const forward = [0, 25, 60, 100].map(distance => workCardPose(start + distance / travel, index, 5, true))
+    const reverse = [100, 60, 25, 0].map(distance => workCardPose(start + distance / travel, index, 5, true)).reverse()
+    assert.deepEqual(forward, reverse)
+    assert.equal(resting.active, true)
+    assert.equal(workCardPose(start + 0.65 / 5 + 0.00001, index, 5, true).opacity, 0)
+  }
 })

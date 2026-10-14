@@ -43,9 +43,10 @@ export function getSectionStops(verticalGallery: boolean): ScrollStop[] {
     const cards = cardGallery.querySelectorAll<HTMLElement>('[data-work-card]')
     const travel = Math.max(0, cardGallery.offsetHeight - height)
     const still = cardGallery.classList.contains('scroll-work-gallery--still')
+    const mobile = cardGallery.dataset.mobileTimeline === 'true'
     // Land inside the active interval; fractional viewport pixels can straddle its boundary.
     cards.forEach((card, index) => {
-      stops.push({ id: `work-${index}`, top: still ? documentTop(card) - 88 : documentTop(cardGallery) + travel * workTimeline(cards.length).cardFraction * Math.min(1, workCardStop(index, cards.length) + 0.015) })
+      stops.push({ id: `work-${index}`, top: still ? documentTop(card) - 88 : documentTop(cardGallery) + travel * workTimeline(cards.length, mobile).cardFraction * Math.min(1, workCardStop(index, cards.length) + 0.015) })
     })
   }
   const track = document.querySelector<HTMLElement>('.wk-track')

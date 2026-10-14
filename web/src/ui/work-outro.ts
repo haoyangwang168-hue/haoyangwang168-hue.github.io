@@ -1,7 +1,7 @@
-/** Add one viewport of reading time while preserving the original card scroll distances. */
-export function workTimeline(count: number): { heightVh: number; cardFraction: number } {
+/** Keep a one-viewport invitation hold; touch layouts give cards triple scroll travel. */
+export function workTimeline(count: number, mobile = false): { heightVh: number; cardFraction: number } {
   const sections = Number.isFinite(count) ? Math.max(0, count) : 0
-  const cardTravelVh = (sections + 2) * 65 - 100
+  const cardTravelVh = ((sections + 2) * 65 - 100) * (mobile ? 3 : 1)
   const holdVh = 100
   return { heightVh: cardTravelVh + holdVh + 100, cardFraction: cardTravelVh / (cardTravelVh + holdVh) }
 }
