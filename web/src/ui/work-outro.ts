@@ -1,9 +1,8 @@
-/** Keep a one-viewport invitation hold; touch layouts give cards triple scroll travel. */
+/** Release the pinned section as soon as the cards finish; touch travel stays tripled. */
 export function workTimeline(count: number, mobile = false): { heightVh: number; cardFraction: number } {
   const sections = Number.isFinite(count) ? Math.max(0, count) : 0
   const cardTravelVh = ((sections + 2) * 65 - 100) * (mobile ? 3 : 1)
-  const holdVh = 100
-  return { heightVh: cardTravelVh + holdVh + 100, cardFraction: cardTravelVh / (cardTravelVh + holdVh) }
+  return { heightVh: cardTravelVh + 100, cardFraction: 1 }
 }
 
 /** Overlap the final card departure, then dissolve into the contact section. */

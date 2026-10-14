@@ -19,17 +19,17 @@ test('invitation leaves with contact, reverses exactly and rejects invalid input
   assert.deepEqual(workOutroPose(NaN, Infinity), workOutroPose(0, 0))
 })
 
-test('reading hold adds a full viewport without slowing down cards or moving their navigation stops', () => {
+test('the invitation exits immediately after card travel without an extra pinned viewport', () => {
   for (const count of [1, 4, 5, 6]) {
-    const timeline = workTimeline(count)
-    const oldTravel = (count + 2) * 65 - 100
-    const newTravel = timeline.heightVh - 100
-    assert.ok(Math.abs(newTravel * timeline.cardFraction - oldTravel) < 1e-10)
-    assert.ok(Math.abs(newTravel * (1 - timeline.cardFraction) - 100) < 1e-10)
-    for (const position of [0, 0.25, 0.5, 0.75, 1]) {
-      const cardProgress = Math.min(1, (timeline.cardFraction + (1 - timeline.cardFraction) * position) / timeline.cardFraction)
-      assert.equal(workOutroPose(cardProgress, 0, 1).opacity, 1)
-      assert.equal(workOutroPose(cardProgress, 0, 1).blur, 0)
+    for (const mobile of [false, true]) {
+      const timeline = workTimeline(count, mobile)
+      const expectedTravel = ((count + 2) * 65 - 100) * (mobile ? 3 : 1)
+      assert.equal(timeline.heightVh - 100, expectedTravel)
+      assert.equal(timeline.cardFraction, 1)
+      // A further 10vh is now exit movement, rather than an unchanged reading hold.
+      const exitProgress = (expectedTravel + 10 - (timeline.heightVh - 100)) / 100
+      assert.ok(workOutroPose(1, exitProgress).y < 0)
+      assert.ok(workOutroPose(1, exitProgress).opacity < 1)
     }
   }
   assert.deepEqual(workTimeline(NaN), workTimeline(0))
@@ -38,9 +38,9 @@ test('reading hold adds a full viewport without slowing down cards or moving the
 test('mobile cards have triple travel and a readable hold without changing desktop timing', () => {
   const desktop = workTimeline(5)
   const mobile = workTimeline(5, true)
-  // Five cards: 355vh becomes 1065vh, followed by the same 100vh invitation hold.
-  assert.equal(desktop.heightVh, 555)
-  assert.equal(mobile.heightVh, 1265)
+  // Five cards still travel 355vh / 1065vh; only the unused tail was removed.
+  assert.equal(desktop.heightVh, 455)
+  assert.equal(mobile.heightVh, 1165)
   const travel = (mobile.heightVh - 100) * mobile.cardFraction
   assert.ok(Math.abs(travel - 1065) < 1e-10)
   for (let index = 0; index < 5; index++) {

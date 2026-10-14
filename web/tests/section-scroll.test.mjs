@@ -13,7 +13,7 @@ test('document limits collapse out-of-range stops and discard invalid geometry',
 test('mobile chapter links land inside each extended card reading interval', (t) => {
   const cards = Array.from({ length: 5 }, () => ({}))
   const gallery = {
-    getBoundingClientRect: () => ({ top: 1800 }), offsetHeight: 10120,
+    getBoundingClientRect: () => ({ top: 1800 }), offsetHeight: 9320,
     dataset: { mobileTimeline: 'true' }, classList: { contains: () => false },
     querySelectorAll: () => cards,
   }
