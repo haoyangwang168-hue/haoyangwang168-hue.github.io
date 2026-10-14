@@ -30,3 +30,12 @@
 @media(max-width:640px) { .portraits { padding: 56px 0 32px; min-height: 0; gap: 28px; } .portrait-photo-layer { gap: 28px; } .portrait-stage { height: 370px; } .portrait-controls { gap: 16px; font-size: 8px; letter-spacing: 0; } .portrait-stage--still { height: auto; grid-template-columns: repeat(2,1fr); } .portrait-viewer { padding: 20px 16px; } }
 @media(prefers-reduced-motion:no-preference) { .portrait-viewer[open] { animation: portrait-reveal .18s ease-out; } }
 @keyframes portrait-reveal { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 640px) {
+  .portraits > header { padding-inline: 24px; }
+  .portraits > header > span { font-size: 11px; letter-spacing: .12em; }
+  .portraits h2 { font-size: clamp(28px, 8vw, 36px); line-height: 1.35; letter-spacing: -.02em; margin: 14px 0 12px; }
+  .portraits p { font-size: 14px; line-height: 1.8; text-wrap: pretty; }
+  .portrait-caption { font-size: 11px; letter-spacing: .06em; }
+  .portrait-controls { font-size: 11px; gap: 14px; }
+}

@@ -58,3 +58,23 @@
 .scroll-work-gallery--still .scroll-work-outro { position: relative; padding: 90px 0 60px; }
 @media (max-width: 640px) { .scroll-work-outro { padding-inline: 16px; } .scroll-work-outro h2 { font-size: clamp(25px, 6.4vw, 34px); } .scroll-work-outro-caption { font-size: 10px; letter-spacing: .06em; margin-bottom: 20px; } .scroll-work-outro-invite { font-size: 12px; } }
 @media (max-height: 550px) { .scroll-work-outro h2 { font-size: 32px; } .scroll-work-outro-caption { margin-bottom: 12px; } .scroll-work-outro-line { margin: 12px 0; } }
+
+@media (max-width: 640px) {
+  .scroll-work-stage > header { align-items: flex-start; gap: 16px; font-size: 10px; line-height: 1.6; letter-spacing: .04em; }
+  .scroll-work-stage > header > span { max-width: 48%; }
+  .scroll-work-stage > header > span:last-child { text-align: right; }
+  .scroll-work-title { font-size: clamp(16px, 4.8vw, 24px); line-height: 1.3; letter-spacing: -.025em; }
+  .scroll-work-face { padding: 16px; }
+  .scroll-work-eyebrow { font-size: 10px; line-height: 1.5; letter-spacing: .06em; }
+  .scroll-work-face h3 { font-family: var(--font-sans); font-size: clamp(23px, 6.5vw, 30px); line-height: 1.25; letter-spacing: -.025em; margin: 12px 0; text-wrap: balance; }
+  .scroll-work-front h3 { font-size: clamp(32px, 9vw, 44px); }
+  .scroll-work-face p { font-size: 12px; line-height: 1.65; margin: 10px 0; text-wrap: pretty; }
+  .scroll-work-links button { font-family: var(--font-sans); font-size: 12px; line-height: 1.5; padding-top: 8px; }
+  .scroll-work-link-hint { font-size: 11px; }
+  .scroll-work-open { font-size: 12px; }
+  .scroll-work-hint { font-size: 11px; line-height: 1.6; }
+  .scroll-work-outro { padding-inline: 24px; }
+  .scroll-work-outro h2 { font-size: clamp(23px, 6.4vw, 32px); line-height: 1.65; letter-spacing: .015em; }
+  .scroll-work-outro-caption { font-size: 11px; line-height: 1.9; letter-spacing: .05em; margin-bottom: 24px; text-wrap: balance; }
+  .scroll-work-outro-invite { font-size: 13px; line-height: 1.8; text-wrap: balance; }
+}

@@ -62,3 +62,14 @@
 .pf-build .pf-build-artwork svg { width: 100%; height: 100%; max-width: none; max-height: none; display: block; }
 .pf-build-artwork > svg { position: relative; }
 @media (max-width: 640px) { .pf-build-artwork { max-height: 26svh; } }
+
+@media (max-width: 640px) {
+  .pf-sticky { padding-inline: 24px; }
+  .pf-topline, .pf-bottomline { font-size: 11px; line-height: 1.7; letter-spacing: .02em; gap: 16px; }
+  .pf-topline > span { font-size: 10px; letter-spacing: .08em; text-align: right; }
+  .pf-invitation { padding-top: 28px; gap: 20px; }
+  .pf-invitation h2 { font-size: clamp(24px, 6.8vw, 30px); line-height: 1.6; letter-spacing: .015em; text-wrap: balance; }
+  .pf-contact p { font-size: 12px; }
+  .pf-contact a { font-size: 23px; letter-spacing: .035em; margin-top: 6px; }
+  .pf-back { font-size: 11px; padding: 11px 13px; }
+}

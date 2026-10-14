@@ -271,5 +271,14 @@
 .resume--editorial .tl-role { font-size: 14px; }
 @media (max-width: 640px) {
   .resume--editorial .tl-entry { padding-left: 0; padding-bottom: 14vh; }
-  .resume--editorial .tl-points li { font-size: 16px; }
+  .resume.resume--editorial { padding-inline: 24px; }
+  .resume--editorial .resume-title { font-size: clamp(38px, 10.5vw, 52px); line-height: 1.15; letter-spacing: -.025em; }
+  .resume--editorial .tl-chapter-title { font-size: clamp(30px, 8.5vw, 40px); line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; }
+  .resume--editorial .tl-chapter-meta { font-size: 11px; gap: 12px; margin-bottom: 18px; letter-spacing: .06em; }
+  .resume--editorial .tl-place { font-size: 20px; line-height: 1.6; text-wrap: pretty; }
+  .resume--editorial .tl-period { font-size: 12px; }
+  .resume--editorial .tl-role { font-size: 14px; line-height: 1.85; }
+  .resume--editorial .tl-points { margin-top: 20px; gap: 16px; }
+  .resume--editorial .tl-points li { font-size: 15px; line-height: 1.95; padding-left: 16px; text-wrap: pretty; }
+  .resume--editorial .tl-group-head { font-size: 16px; line-height: 1.7; }
 }
