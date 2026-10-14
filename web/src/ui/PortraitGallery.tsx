@@ -5,7 +5,7 @@ import { galleryWheelStep } from './gallery-math'
 import { useIsCompact, usePrefersReducedMotion } from './useParallax'
 import './portrait-gallery.css'
 
-const PHOTOS = ['haoyang-sunglasses.webp', 'haoyang-portrait.jpg', 'haoyang-coast.jpg', 'haoyang-outdoors.jpg']
+const PHOTOS = ['haoyang-sunglasses.jpg', 'haoyang-portrait.jpg', 'haoyang-coast.jpg', 'haoyang-outdoors.jpg']
 // Preserve hair in selfies and the off-centre subject in the seaside photograph.
 const PHOTO_FRAMING = [
   { scale: 1.3, position: '50% 0%', origin: '50% 0%', bias: 0.1 },
