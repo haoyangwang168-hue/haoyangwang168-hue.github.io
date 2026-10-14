@@ -4,11 +4,11 @@ import { footerPose } from '../src/ui/footer-motion.ts'
 
 test('six echoes stay registered initially and finish before the I morph begins', () => {
   assert.deepEqual(footerPose(0, 5), { scale: 1, y: 0, morph: 0 })
-  assert.deepEqual(footerPose(0.5, 5), { scale: 0.625, y: 25, morph: 0 })
+  assert.deepEqual(footerPose(0.3, 5), { scale: 0.625, y: 25, morph: 0 })
   assert.deepEqual(footerPose(1, 5), { scale: 0.625, y: 25, morph: 1 })
-  assert.equal(footerPose(0.75).morph, 0)
-  assert.equal(footerPose(0.78).morph, 0)
-  assert.ok(Math.abs(footerPose(0.89).morph - 0.5) < 1e-12)
+  assert.equal(footerPose(0.3).morph, 0)
+  assert.equal(footerPose(0.35).morph, 0)
+  assert.ok(Math.abs(footerPose(0.675).morph - 0.5) < 1e-12)
   assert.deepEqual(footerPose(NaN, Infinity), { scale: 1, y: 0, morph: 0 })
   assert.deepEqual(footerPose(2, 9), footerPose(1, 5))
   const forwards = [0, 0.25, 0.5, 0.75, 1].map(p => footerPose(p, 3))
@@ -17,7 +17,7 @@ test('six echoes stay registered initially and finish before the I morph begins'
 })
 test('morph eases gently at each endpoint and stays monotonic through reversal', () => {
   const step = 0.001
-  assert.ok(footerPose(0.78 + step).morph < 0.0001)
+  assert.ok(footerPose(0.35 + step).morph < 0.0001)
   assert.ok(1 - footerPose(1 - step).morph < 0.0001)
   let previous = 0
   for (let i = 0; i <= 100; i++) {
