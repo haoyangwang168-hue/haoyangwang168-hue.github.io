@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { portraitInertia, portraitParallax, portraitPosition } from './portrait-math'
 import { galleryWheelStep } from './gallery-math'
+import { responsiveImage } from '../data/responsiveImage'
 import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import './portrait-gallery.css'
 
@@ -213,7 +214,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
             if (event.detail > 0 && performance.now() < suppressClickUntil.current) return
             setSelected(index % 4)
           }}>
-          <img src={photoUrl(index % 4)} alt={LABELS[lang][index % 4]} style={{ objectPosition: PHOTO_FRAMING[index % 4].position, transformOrigin: PHOTO_FRAMING[index % 4].origin }} loading="eager" decoding="async" draggable={false} />
+          <img {...responsiveImage(photoUrl(index % 4))} sizes="(max-width: 640px) 78vw, 360px" alt={LABELS[lang][index % 4]} style={{ objectPosition: PHOTO_FRAMING[index % 4].position, transformOrigin: PHOTO_FRAMING[index % 4].origin }} loading="lazy" decoding="async" draggable={false} />
           <span className="portrait-caption"><span>{String(index % 4 + 1).padStart(2, '0')} / HAOYANG</span><span>↗</span></span>
         </button>)}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent, type SyntheticEvent } from 'react'
 import type { WorkImage } from '../data/workMedia'
+import { responsiveImage } from '../data/responsiveImage'
 import { advanceGalleryMotion, galleryFrames, galleryImageScale, galleryWheelStep, galleryWheelTarget, GALLERY_SLOTS, wrapIndex } from './gallery-math'
 import { usePrefersReducedMotion } from './useParallax'
 import './image-gallery.css'
@@ -124,7 +125,12 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
           if (button.dataset.imageIndex !== String(box.index)) {
             button.dataset.imageIndex = String(box.index)
             button.setAttribute('aria-label', asset.alt)
-            if (picture) { picture.src = asset.src; picture.alt = asset.alt }
+            if (picture) {
+              const preview = responsiveImage(asset.src)
+              picture.srcset = preview.srcSet ?? ''
+              picture.src = preview.src
+              picture.alt = asset.alt
+            }
           }
           button.style.transform = `translate3d(${box.left}px, 0, 0) scale(${box.width / baseWidth}, ${box.height / height})`
           if (picture) {
@@ -232,7 +238,8 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
               setExpanded(true)
             }}
           >
-            <img src={images[slot % images.length].src} alt={images[slot % images.length].alt} draggable={false} decoding="async" onLoad={imageLoaded} onError={imageFailed} />
+            {/* Visible recycled slots receive their preview source in the draw loop. */}
+            <img sizes="(max-width: 640px) 90vw, 60vw" alt={images[slot % images.length].alt} draggable={false} decoding="async" onLoad={imageLoaded} onError={imageFailed} />
           </button>
         ))}
         <span className="image-flow-hint" aria-hidden="true">{zh ? '拖动或滚轮探索 ↔' : 'Drag or scroll to explore ↔'}</span>

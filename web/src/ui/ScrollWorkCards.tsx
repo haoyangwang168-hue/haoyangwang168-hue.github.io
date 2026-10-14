@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { SECTION_COVERS, type WorkSection, type WorkListItem, type WorksLang } from '../data/works'
+import { responsiveImage } from '../data/responsiveImage'
 import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import { workOutroPose, workTimeline } from './work-outro'
 import { workCardPose } from './portrait-math'
@@ -71,7 +72,7 @@ function Card({ section, index, count, progress, data, onOpen, reduced, mobile }
       <span className="scroll-work-eyebrow">{section.no} / SELECTED WORK</span>
       <h3>{section.title}</h3>
       <button className="scroll-work-cover" disabled={!items.length} onClick={() => items[0] && onOpen(items[0])} aria-label={`${data.openLabel}: ${items[0]?.name ?? section.title}`}>
-        <img src={SECTION_COVERS[section.id]} alt="" loading="eager" decoding="async" draggable={false} /><span className="scroll-work-open" aria-hidden="true">{data.openLabel}<span>↗</span></span>
+        <img {...responsiveImage(SECTION_COVERS[section.id])} sizes="(max-width: 640px) 72vw, 380px" alt="" loading="lazy" decoding="async" draggable={false} /><span className="scroll-work-open" aria-hidden="true">{data.openLabel}<span>↗</span></span>
       </button>
       <p>{section.tagline}</p>
       <div className="scroll-work-links">{items.map(item => <button key={item.name} onClick={() => onOpen(item)}>{item.name}<span className="scroll-work-link-hint" aria-hidden="true">{data.openLabel}<span>↗</span></span></button>)}</div>
