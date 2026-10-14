@@ -89,6 +89,9 @@
 }
 
 /* Scrolling fingers must not trigger moving foil or extra blend surfaces. */
+.profile-card--plain { perspective: none; touch-action: pan-y pinch-zoom; }
+.profile-card--plain .profile-card__body { transform: none; }
+.profile-card--plain .scroll-work-cover img { transform: none; }
 @media (max-width: 640px), (pointer: coarse) {
   .profile-card__holo, .profile-card__glare, .profile-card__shade { display: none; }
 }

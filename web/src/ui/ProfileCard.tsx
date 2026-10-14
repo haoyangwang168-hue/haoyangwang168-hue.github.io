@@ -155,13 +155,13 @@ export default function ProfileCard({ children, className = '', enabled = true, 
     '--pc-holo': Number.isFinite(holo) ? Math.max(0, Math.min(1, holo)) : 0.6,
     '--pc-glare': Number.isFinite(glare) ? Math.max(0, Math.min(1, glare)) : 0.28,
   } as CSSProperties
-  return <div ref={rootRef} className={`profile-card ${className}`.trim()} style={style}>
+  return <div ref={rootRef} className={`profile-card ${className}${mobile ? ' profile-card--plain' : ''}`.trim()} style={style}>
     <div className="profile-card__body">
       {children}
-      <span className="profile-card__holo" aria-hidden="true" />
+      {!mobile && <><span className="profile-card__holo" aria-hidden="true" />
       <span className="profile-card__glare" aria-hidden="true" />
       <span className="profile-card__shade" aria-hidden="true" />
-      <span className="profile-card__rim" aria-hidden="true" />
+      <span className="profile-card__rim" aria-hidden="true" /></>}
     </div>
   </div>
 }

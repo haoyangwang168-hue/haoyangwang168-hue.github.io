@@ -7,6 +7,7 @@ import { workOutroPose, workTimeline } from './work-outro'
 import { workCardPose } from './portrait-math'
 import { worksPageParallax } from './works-transition'
 import ProfileCard from './ProfileCard'
+import { useWorkCardTouch } from './useWorkCardTouch'
 import './scroll-work-cards.css'
 
 function Card({ section, index, count, progress, data, onOpen, reduced, mobile }: { section: WorkSection; index: number; count: number; progress: MotionValue<number>; data: WorksLang; onOpen: (item: WorkListItem) => void; reduced: boolean; mobile: boolean }) {
@@ -93,6 +94,8 @@ function OutroLine({ text, index, progress, exitProgress, reduced }: { text: str
 /** Native document scrolling controls a reversible stack of clickable work cards. */
 export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: { data: WorksLang; lang: 'zh' | 'en'; onOpen: (item: WorkListItem) => void; entryProgress: MotionValue<number> }) {
   const galleryRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const deckRef = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
   const compact = useIsCompact()
   const mobile = useMobileInput()
@@ -101,6 +104,7 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const { scrollYProgress } = useScroll({ target: galleryRef, offset: ['start start', 'end end'] })
   const timeline = workTimeline(data.sections.length, mobile)
   const cardProgress = useTransform(scrollYProgress, p => Math.min(1, p / timeline.cardFraction))
+  useWorkCardTouch(galleryRef, stageRef, deckRef, scrollYProgress, mobile && !reduced, data.sections.length)
   // Keep the invitation on the same native scroll timeline as the departing cards.
   const outroProgress = cardProgress
   const { scrollYProgress: rawExitProgress } = useScroll({ target: galleryRef, offset: ['end end', 'end start'] })
@@ -112,10 +116,10 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const headingY = useTransform(() => headingDepartureY.get() + entryY.get())
   const headingOpacity = useTransform(cardProgress, [0.04, 0.12], [1, 0])
   return <div id="work-overview" ref={galleryRef} className={`scroll-work-gallery${reduced ? ' scroll-work-gallery--still' : ''}`} data-scroll-work-gallery data-mobile-timeline={mobile} style={{ height: reduced ? 'auto' : `${timeline.heightVh}svh` }}>
-    <div className="scroll-work-stage">
+    <div ref={stageRef} className="scroll-work-stage">
       <motion.header style={{ y: entryY }} data-works-incoming><span>A FEW THINGS I'VE MADE</span><span>SELECTED WORKS / 2026</span></motion.header>
       <motion.h2 className="scroll-work-title" style={reduced ? {} : { y: headingY, opacity: headingOpacity }}>SCROLL DOWN AND WATCH<br />EVERYTHING FALL INTO PLACE</motion.h2>
-      <motion.div className="scroll-work-deck" style={{ y: deckY }}>{data.sections.map((section, index) => <Card key={section.id} section={section} index={index} count={data.sections.length} progress={cardProgress} data={data} onOpen={onOpen} reduced={reduced} mobile={mobile} />)}</motion.div>
+      <motion.div ref={deckRef} className="scroll-work-deck" style={{ y: deckY }}>{data.sections.map((section, index) => <Card key={section.id} section={section} index={index} count={data.sections.length} progress={cardProgress} data={data} onOpen={onOpen} reduced={reduced} mobile={mobile} />)}</motion.div>
       <motion.div className="scroll-work-outro" style={reduced ? {} : { visibility: outroVisibility }}>
         <motion.p className="scroll-work-outro-caption" style={reduced ? {} : { opacity: outroOpacity }}>{lang === 'zh' ? '从我的作品，到我们的下一次创作' : 'FROM MY WORK, TO WHAT WE MAKE TOGETHER'}</motion.p>
         <h2><OutroLine text={lang === 'zh' ? '下一件作品，' : 'The next creation,'} index={0} progress={outroProgress} exitProgress={exitProgress} reduced={reduced} /><OutroLine text={lang === 'zh' ? '也许我们一起完成。' : 'could be ours.'} index={1} progress={outroProgress} exitProgress={exitProgress} reduced={reduced} /></h2>
