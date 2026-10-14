@@ -54,47 +54,170 @@ function eventTarget() {
   }
 }
 
-test('touch move updates immediately, release stays put, tap and multi-touch remain safe', t => {
+function fixture(t, initial = 0.12) {
   const previousWindow = globalThis.window
-  const scrollCalls = []
-  const progress = []
-  const host = { ...eventTarget(), scrollY: at(0.12), scrollTo: ({ top, behavior }) => {
-    assert.equal(behavior, 'instant')
-    host.scrollY = top
-    scrollCalls.push(top)
-  } }
-  globalThis.window = host
-  t.after(() => { if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow })
-  const stage = { ...eventTarget(), offsetHeight: 800 }
-  const gallery = { offsetHeight: 9800, getBoundingClientRect: () => ({ top: top - host.scrollY }) }
-  const dispose = bindWorkCardTouch(gallery, stage, { offsetHeight: height }, { set: value => progress.push(value) }, count)
-  const touch = y => ({ identifier: 1, clientX: 150, clientY: y })
+  const previousDocument = globalThis.document
+  const calls = []
+  const values = []
+  const frames = new Map()
+  let frameId = 0
+  let current = 0
   let prevented = 0
-  const move = y => stage.send('touchmove', { touches: [touch(y)], cancelable: true, preventDefault: () => prevented++ })
-  stage.send('touchstart', { touches: [touch(600)] })
-  move(598)
-  assert.equal(prevented, 1)
-  assert.equal(scrollCalls.length, 0)
-  move(400)
-  near(progress.at(-1), 0.185)
-  move(600)
-  near(progress.at(-1), 0.12)
-  stage.send('touchend')
-  const releaseCount = scrollCalls.length
-  move(300)
-  assert.equal(scrollCalls.length, releaseCount)
-  let clickBlocked = false
-  stage.send('click', { detail: 1, preventDefault: () => { clickBlocked = true }, stopPropagation() {} })
-  assert.equal(clickBlocked, true)
-  stage.send('touchstart', { touches: [touch(600)] })
-  stage.send('touchend')
-  clickBlocked = false
-  stage.send('click', { detail: 1, preventDefault: () => { clickBlocked = true }, stopPropagation() {} })
-  assert.equal(clickBlocked, false)
-  stage.send('touchstart', { touches: [touch(600), { ...touch(550), identifier: 2 }] })
-  move(300)
-  assert.equal(scrollCalls.length, releaseCount)
-  dispose()
-  assert.equal(stage.listeners.size, 0)
-  assert.equal(host.listeners.size, 0)
+  const documentRoot = { clientHeight: 900 }
+  const host = {
+    ...eventTarget(), scrollY: at(initial),
+    requestAnimationFrame: callback => { frames.set(++frameId, callback); return frameId },
+    cancelAnimationFrame: id => frames.delete(id),
+    scrollTo: ({ top, behavior }) => {
+      assert.equal(behavior, 'instant')
+      host.scrollY = Math.max(0, top)
+      calls.push(host.scrollY)
+      host.send('scroll')
+    },
+  }
+  globalThis.window = host
+  globalThis.document = { documentElement: documentRoot }
+  const stage = { ...eventTarget(), offsetHeight: 800 }
+  // The sticky stage is deliberately 100px shorter than the document viewport.
+  const gallery = { clientHeight: 9900, getBoundingClientRect: () => ({ top: top - host.scrollY }) }
+  const deck = { offsetHeight: height }
+  const progress = { get: () => current, set: value => { current = value; values.push(value) } }
+  const dispose = bindWorkCardTouch(gallery, stage, deck, progress, count)
+  t.after(() => {
+    dispose()
+    if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow
+    if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument
+  })
+  const finger = y => ({ identifier: 1, clientX: 150, clientY: y })
+  return {
+    host, stage, gallery, deck, documentRoot, calls, values, frames, progress, dispose, finger,
+    start: y => stage.send('touchstart', { touches: [finger(y)] }),
+    move: y => stage.send('touchmove', { touches: [finger(y)], cancelable: true, preventDefault: () => prevented++ }),
+    end: () => stage.send('touchend'),
+    prevented: () => prevented,
+    flush: () => { const queued = [...frames.values()]; frames.clear(); queued.forEach(callback => callback()) },
+  }
+}
+
+test('local drag ignores scroll notifications and performs zero page writes until release', t => {
+  const f = fixture(t)
+  f.host.send('scroll') // A frame queued before touching must not replay the old position.
+  f.start(600)
+  f.move(598)
+  assert.equal(f.prevented(), 1)
+  f.move(400)
+  near(f.progress.get(), 0.185)
+  near(f.host.scrollY, at(0.12))
+  f.host.send('scroll')
+  f.flush()
+  near(f.progress.get(), 0.185)
+  assert.equal(f.calls.length, 0)
+  f.end()
+  near(f.host.scrollY, at(0.185))
+  near(f.progress.get(), 0.185)
+  assert.equal(f.calls.length, 1)
+  f.host.send('scroll')
+  f.flush()
+  near(f.progress.get(), 0.185)
+  f.move(100)
+  assert.equal(f.calls.length, 1)
+})
+
+test('viewport change preserves the pose and rebases the finger without canceling touch', t => {
+  const f = fixture(t)
+  f.start(600)
+  f.move(400)
+  const poseBefore = workCardPose(f.progress.get(), 0, count, true)
+  f.documentRoot.clientHeight = 1000
+  f.host.send('resize')
+  assert.deepEqual(workCardPose(f.progress.get(), 0, count, true), poseBefore)
+  f.move(400)
+  near(f.progress.get(), 0.185)
+  f.move(300)
+  near(f.progress.get(), 0.2175)
+  assert.equal(f.calls.length, 0)
+  f.end()
+  near(f.host.scrollY, top + (9900 - 1000) * 0.2175)
+  near(f.progress.get(), 0.2175)
+  f.host.send('scroll')
+  f.flush()
+  near(f.progress.get(), 0.2175)
+})
+
+test('reversal stays exact across repeated drags and a new gesture before scroll delivery', t => {
+  const f = fixture(t)
+  f.start(600)
+  f.move(400)
+  f.end()
+  f.start(400)
+  f.move(600)
+  near(f.progress.get(), 0.12)
+  f.flush()
+  near(f.progress.get(), 0.12)
+  f.end()
+  near(f.host.scrollY, at(0.12))
+})
+
+test('only overflow beyond the gallery moves the page and reversing re-enters the deck', t => {
+  const f = fixture(t, 0.99)
+  f.start(600)
+  // The last .01 of progress uses 24px; the other 76px belongs to the next section.
+  f.move(500)
+  near(f.progress.get(), 1)
+  near(f.host.scrollY, at(1) + 76)
+  f.move(600)
+  near(f.progress.get(), 0.99)
+  near(f.host.scrollY, at(0.99))
+  f.end()
+  near(f.host.scrollY, at(0.99))
+})
+
+test('upward exit and pre-entry gestures preserve normal document scrolling', t => {
+  const f = fixture(t, 0)
+  f.start(500)
+  f.move(580)
+  near(f.host.scrollY, top - 80)
+  near(f.progress.get(), 0)
+  f.end()
+  const countBefore = f.calls.length
+  f.start(500)
+  f.move(450)
+  assert.equal(f.calls.length, countBefore)
+})
+
+test('tap, drag-click suppression, cancellation, multitouch and cleanup remain safe', t => {
+  const f = fixture(t)
+  f.start(600)
+  f.move(400)
+  f.stage.send('touchcancel')
+  near(f.progress.get(), 0.185)
+  assert.equal(f.calls.length, 1)
+  let blocked = false
+  const click = { detail: 1, preventDefault: () => { blocked = true }, stopPropagation() {} }
+  f.stage.send('click', click)
+  assert.equal(blocked, true)
+  blocked = false
+  f.start(600)
+  f.end()
+  f.stage.send('click', click)
+  assert.equal(blocked, false)
+  f.start(600)
+  f.move(500)
+  const saved = f.progress.get()
+  f.stage.send('touchstart', { touches: [f.finger(500), { ...f.finger(550), identifier: 2 }] })
+  f.move(300)
+  near(f.progress.get(), saved)
+  f.host.send('scroll')
+  f.dispose()
+  assert.equal(f.stage.listeners.size, 0)
+  assert.equal(f.host.listeners.size, 0)
+  assert.equal(f.frames.size, 0)
+})
+
+test('ordinary chapter navigation updates mobile progress when no finger owns it', t => {
+  const f = fixture(t)
+  f.host.scrollY = at(0.7)
+  f.host.send('scroll')
+  f.flush()
+  near(f.progress.get(), 0.7)
 })

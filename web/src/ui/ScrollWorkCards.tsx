@@ -103,8 +103,8 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const deckY = useTransform(entryProgress, p => worksPageParallax(p, compact, reduced).deckY)
   const { scrollYProgress } = useScroll({ target: galleryRef, offset: ['start start', 'end end'] })
   const timeline = workTimeline(data.sections.length, mobile)
-  const cardProgress = useTransform(scrollYProgress, p => Math.min(1, p / timeline.cardFraction))
-  useWorkCardTouch(galleryRef, stageRef, deckRef, scrollYProgress, mobile && !reduced, data.sections.length)
+  const inputProgress = useWorkCardTouch(galleryRef, stageRef, deckRef, scrollYProgress, mobile && !reduced, data.sections.length)
+  const cardProgress = useTransform(inputProgress, p => Math.min(1, p / timeline.cardFraction))
   // Keep the invitation on the same native scroll timeline as the departing cards.
   const outroProgress = cardProgress
   const { scrollYProgress: rawExitProgress } = useScroll({ target: galleryRef, offset: ['end end', 'end start'] })
@@ -127,7 +127,7 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
         <motion.p className="scroll-work-outro-invite" style={reduced ? {} : { opacity: outroOpacity }}>{lang === 'zh' ? '继续向下，一起聊聊你的想法' : 'Keep scrolling. Let’s talk about your idea.'}<span aria-hidden="true">↓</span></motion.p>
       </motion.div>
       <div className="scroll-work-hint">{data.hint} ↓ <span>{data.openLabel} ↗</span></div>
-      {!reduced && <div className="scroll-work-progress" aria-hidden="true"><motion.div style={{ scaleX: scrollYProgress }} /></div>}
+      {!reduced && <div className="scroll-work-progress" aria-hidden="true"><motion.div style={{ scaleX: inputProgress }} /></div>}
     </div>
   </div>
 }
