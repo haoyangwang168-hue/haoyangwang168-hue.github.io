@@ -100,6 +100,8 @@
   --font-cjk: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-display: 'Geist Mono', var(--font-cjk), ui-monospace, monospace;
   --font-body: 'Source Code Pro', var(--font-cjk), ui-monospace, monospace;
+  /* Prose and controls use proportional Latin beside the existing CJK face. */
+  --font-reading: Arial, var(--font-cjk);
   --font-sans: var(--font-body);
   --paper: #fafdf3;
   --charcoal: #0a0a0d;

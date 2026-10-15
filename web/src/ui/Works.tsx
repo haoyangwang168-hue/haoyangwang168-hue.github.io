@@ -131,6 +131,7 @@ function WorkDetail({
       />
       <motion.div
         className="wk-detail"
+        lang={lang}
         ref={detailRef}
         role="dialog"
         aria-modal="true"

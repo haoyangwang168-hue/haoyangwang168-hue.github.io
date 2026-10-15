@@ -1,8 +1,8 @@
 /* Reading columns for the three camera-aligned story chapters. */
 .resume--editorial {
   --resume-ink: #fafdf3;
-  --resume-muted: rgba(250, 253, 243, 0.7);
-  --resume-accent: #a9957b;
+  --resume-muted: rgba(250, 253, 243, 0.84);
+  --resume-accent: #d7c7ab;
   color: var(--resume-ink);
 }
 
@@ -22,10 +22,10 @@
   justify-content: space-between;
   gap: 18px;
   font-family: var(--font-body), var(--font-cjk), monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--resume-muted);
 }
@@ -58,8 +58,8 @@
   margin: 28px 0 0;
   padding-top: 18px;
   border-top: 1px solid rgba(250, 253, 243, 0.22);
-  font-family: var(--font-sans);
-  font-size: 12px;
+  font-family: var(--font-reading);
+  font-size: 14px;
   line-height: 1.8;
   color: var(--resume-muted);
 }
@@ -104,13 +104,13 @@
 
 .resume--editorial .tl-content {
   max-width: 445px;
-  font-family: var(--font-sans);
+  font-family: var(--font-reading);
 }
 
 .resume--editorial .tl-period {
   margin: 0 0 12px;
-  font-family: var(--font-sans);
-  font-size: 11px;
+  font-family: var(--font-reading);
+  font-size: 13px;
   line-height: 1.8;
   letter-spacing: 0.04em;
   color: var(--resume-accent);
@@ -118,11 +118,12 @@
 
 .resume--editorial .tl-place {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: clamp(20px, 2vw, 25px);
+  font-family: var(--font-reading);
+  font-size: clamp(22px, 2vw, 26px);
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  text-wrap: balance;
   color: var(--resume-ink);
 }
 
@@ -131,6 +132,7 @@
   font-size: 13px;
   line-height: 1.8;
   color: var(--resume-muted);
+  text-wrap: pretty;
 }
 
 .resume--editorial .tl-points {
@@ -144,6 +146,7 @@
   line-height: 1.9;
   letter-spacing: 0;
   color: var(--resume-ink);
+  text-wrap: pretty;
 }
 
 .resume--editorial .tl-points li::before {
@@ -229,6 +232,16 @@
     border-radius: 0;
   }
 
+  /* A local scrim keeps reading contrast steady over the moving portrait. */
+  .resume--editorial .tl-body::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgba(10, 10, 13, 0.52) 12%, rgba(10, 10, 13, 0.52) 88%, transparent);
+  }
+
   .resume--editorial .tl-chapter {
     margin-bottom: 34px;
   }
@@ -274,11 +287,11 @@
   .resume.resume--editorial { padding-inline: 24px; }
   .resume--editorial .resume-title { font-size: clamp(38px, 10.5vw, 52px); line-height: 1.15; letter-spacing: -.025em; }
   .resume--editorial .tl-chapter-title { font-size: clamp(30px, 8.5vw, 40px); line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; }
-  .resume--editorial .tl-chapter-meta { font-size: 11px; gap: 12px; margin-bottom: 18px; letter-spacing: .06em; }
-  .resume--editorial .tl-place { font-size: 20px; line-height: 1.6; text-wrap: pretty; }
-  .resume--editorial .tl-period { font-size: 12px; }
-  .resume--editorial .tl-role { font-size: 14px; line-height: 1.85; }
+  .resume--editorial .tl-chapter-meta { font-size: 12px; gap: 12px; margin-bottom: 18px; letter-spacing: .04em; }
+  .resume--editorial .tl-place { font-size: 22px; line-height: 1.5; }
+  .resume--editorial .tl-period { font-size: 13px; margin-bottom: 10px; }
+  .resume--editorial .tl-role { font-size: 14px; line-height: 1.75; margin-top: 10px; }
   .resume--editorial .tl-points { margin-top: 20px; gap: 16px; }
-  .resume--editorial .tl-points li { font-size: 15px; line-height: 1.95; padding-left: 16px; text-wrap: pretty; }
+  .resume--editorial .tl-points li { font-size: 16px; line-height: 1.85; padding-left: 16px; }
   .resume--editorial .tl-group-head { font-size: 16px; line-height: 1.7; }
 }

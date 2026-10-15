@@ -88,7 +88,7 @@ function Hero({ lang, cueOpacity, ready }: { lang: Lang; cueOpacity: MotionValue
             <RevealHeading text={title} as="h1" className="about-title" inherit delay={0.45} />
             <motion.p className="hero-tagline" variants={copyVariants(0.6)}>{lang === 'zh' ? <><span>用 AI、设计和影像，</span><span>把想法做出来。</span></> : tagline}</motion.p>
             <div className="hero-copy-mask">
-              <motion.p className="about-body about-lead" variants={copyVariants(0.9)}>{introduction}</motion.p>
+              <motion.p className="about-body about-lead" variants={copyVariants(0.9)}>{lang === 'zh' ? introduction.split('，').map((phrase, index, phrases) => <span key={phrase} className="hero-intro-phrase">{phrase}{index < phrases.length - 1 ? '，' : ''}</span>) : introduction}</motion.p>
             </div>
           </motion.div>
           <motion.div className="hero-statement" style={bodyLayer} data-parallax-layer="hero-body">

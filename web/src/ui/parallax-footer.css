@@ -1,6 +1,6 @@
 .parallax-footer { position: relative; z-index: 2; height: 200svh; background: #f6f3eb; color: #252525; font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; isolation: isolate; }
 .pf-sticky { position: sticky; top: 0; height: 100svh; min-height: 540px; padding: 90px clamp(24px, 5vw, 96px) 80px; display: flex; flex-direction: column; overflow: hidden; background: #f6f3eb; }
-.pf-topline, .pf-bottomline { display: flex; justify-content: space-between; align-items: center; gap: 24px; font-family: var(--font-body), var(--font-cjk), monospace; font-size: 11px; line-height: 1.8; letter-spacing: .06em; }
+.pf-topline, .pf-bottomline { display: flex; justify-content: space-between; align-items: center; gap: 24px; font-family: var(--font-reading); font-size: 12px; line-height: 1.7; letter-spacing: .035em; }
 .pf-topline { padding-bottom: 16px; border-bottom: 1px solid #25252533; }
 .pf-topline p, .pf-contact p { margin: 0; }
 .pf-invitation { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding-top: 24px; }
@@ -14,11 +14,11 @@
 .pf-echo path { vector-effect: non-scaling-stroke; }
 .pf-build-front { fill: #34362f; stroke: none; }
 .pf-morph-link { cursor: pointer; }
-.pf-morph-link text { fill: #f6f3eb; font-family: var(--font-sans), var(--font-cjk), sans-serif; font-size: 12px; letter-spacing: 1px; pointer-events: none; }
+.pf-morph-link text { fill: #f6f3eb; font-family: var(--font-sans), var(--font-cjk), sans-serif; font-size: 20px; letter-spacing: 1px; pointer-events: none; }
 .pf-morph-link:focus-visible { outline: none; }
 .pf-morph-link:focus-visible rect { stroke: #a66b2b; stroke-width: 5px; }
 .pf-bottomline { border-top: 1px solid #25252533; padding-top: 14px; }
-.pf-back { border: 1px solid #25252555; border-radius: 999px; padding: 12px 20px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.pf-back { border: 1px solid #25252555; border-radius: 999px; padding: 12px 20px; background: transparent; color: inherit; cursor: pointer; font: 500 13px/1.5 var(--font-reading); }
 .pf-back:focus-visible, .pf-contact a:focus-visible { outline: 2px solid #a66b2b; outline-offset: 5px; }
 @media (hover: hover) { .pf-back:hover { background: #252525; color: #f6f3eb; } .pf-contact a:hover { text-decoration: underline; } }
 @media (max-width: 640px) {
@@ -29,7 +29,8 @@
   .pf-contact a { font-size: 18px; }
   .pf-build svg { width: calc(100% + 20px); max-height: 52svh; }
   .pf-morph-link rect { stroke: #252525; stroke-width: var(--pf-button-stroke, 0px); }
-  .pf-morph-link text { font-size: 22px; }
+  /* SVG text scales with the artwork; 34 units remains readable on a phone. */
+  .pf-morph-link text { font-size: 34px; }
   .pf-bottomline { font-size: 9px; gap: 12px; }
   .pf-back { padding: 10px 12px; white-space: nowrap; }
 }
@@ -45,12 +46,13 @@
 }
 
 /* Quiet editorial typography lets the custom serif sculpture carry the section. */
-.pf-invitation h2 { font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif; font-size: clamp(28px, 2.8vw, 44px); font-weight: 400; line-height: 1.55; letter-spacing: .035em; }
-.pf-contact p { font: 400 12px/1.8 "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; color: #777166; }
+.pf-invitation h2 { font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif; font-size: clamp(28px, 2.8vw, 44px); font-weight: 400; line-height: 1.5; letter-spacing: .025em; text-wrap: balance; }
+.parallax-footer[lang='en'] .pf-invitation h2 { font-family: Georgia, "Times New Roman", serif; line-height: 1.35; letter-spacing: -.015em; }
+.pf-contact p { font: 400 13px/1.7 var(--font-reading); color: #625c52; }
 .pf-contact a { display: inline-block; margin-top: 8px; font: 400 clamp(20px, 1.8vw, 28px)/1.4 Georgia, "Times New Roman", serif; letter-spacing: .06em; font-variant-numeric: lining-nums; }
-.pf-topline, .pf-bottomline { font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; font-weight: 400; color: #777166; }
+.pf-topline, .pf-bottomline { font-family: var(--font-reading); font-weight: 400; color: #625c52; }
 .pf-topline > span { font-family: Georgia, "Times New Roman", serif; letter-spacing: .15em; }
-.pf-morph-link text { font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; font-weight: 400; letter-spacing: 1.5px; }
+.pf-morph-link text { font-family: var(--font-reading); font-weight: 400; letter-spacing: 1.5px; }
 @media (max-width: 640px) {
   .pf-invitation h2 { font-size: 27px; line-height: 1.55; letter-spacing: .02em; }
   .pf-contact a { font-size: 21px; }
@@ -65,11 +67,12 @@
 
 @media (max-width: 640px) {
   .pf-sticky { padding-inline: 24px; }
-  .pf-topline, .pf-bottomline { font-size: 11px; line-height: 1.7; letter-spacing: .02em; gap: 16px; }
-  .pf-topline > span { font-size: 10px; letter-spacing: .08em; text-align: right; }
+  .pf-topline, .pf-bottomline { font-size: 12px; line-height: 1.65; letter-spacing: 0; gap: 16px; }
+  .pf-topline > span { flex-shrink: 0; white-space: nowrap; font-size: 11px; letter-spacing: .04em; text-align: right; }
   .pf-invitation { padding-top: 28px; gap: 20px; }
-  .pf-invitation h2 { font-size: clamp(24px, 6.8vw, 30px); line-height: 1.6; letter-spacing: .015em; text-wrap: balance; }
-  .pf-contact p { font-size: 12px; }
+  .pf-invitation h2 { font-size: clamp(25px, 6.9vw, 30px); line-height: 1.5; letter-spacing: .01em; text-wrap: balance; }
+  .pf-contact p { font-size: 13px; }
   .pf-contact a { font-size: 23px; letter-spacing: .035em; margin-top: 6px; }
-  .pf-back { font-size: 11px; padding: 11px 13px; }
+  .pf-bottomline > span { min-width: 0; text-wrap: pretty; }
+  .pf-back { flex-shrink: 0; font-size: 12px; padding: 11px 13px; }
 }

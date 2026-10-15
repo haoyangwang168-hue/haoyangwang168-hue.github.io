@@ -1,9 +1,9 @@
 .portraits { position: relative; overflow: clip; background: transparent; isolation: isolate; color: #34362f; padding: 72px 0 36px; z-index: 2; min-height: min(780px, 100svh); display: flex; flex-direction: column; justify-content: center; gap: 32px; }
 .portrait-surface { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, #d8d4c9 0%, #e8e4da 32%, #f3f0e8 100%); }
 .portraits > header { padding: 0 clamp(24px, 6vw, 96px); }
-.portraits > header > span { color: #77786e; font: 10px monospace; letter-spacing: 2px; }
-.portraits h2 { font-size: clamp(28px, 3.5vw, 44px); font-weight: 500; margin: 16px 0; }
-.portraits p { font-size: 12px; color: #66685e; margin: 0; }
+.portraits > header > span { color: #626459; font: 400 12px/1.6 var(--font-body); letter-spacing: .1em; }
+.portraits h2 { font-family: var(--font-display); font-size: clamp(30px, 3.5vw, 44px); line-height: 1.3; font-weight: 500; letter-spacing: -.02em; margin: 16px 0 12px; text-wrap: balance; }
+.portraits p { max-width: 44em; font: 400 15px/1.8 var(--font-reading); color: #55584e; margin: 0; text-wrap: pretty; }
 .portrait-photo-layer { transform-origin: 50% 0; display: flex; flex-direction: column; gap: 32px; min-width: 0; flex: none; }
 .portrait-stage { position: relative; overflow: hidden; height: clamp(320px, 35vw, 440px); touch-action: pan-y pinch-zoom; cursor: grab; flex: none; }
 .portrait-stage[data-dragging] { cursor: grabbing; }
@@ -11,11 +11,11 @@
 .portrait-stage--native .portrait-card { position: relative; flex: 0 0 78%; min-width: 0; scroll-snap-align: start; }
 .portrait-card { position: absolute; top: 0; height: 100%; margin: 0; overflow: hidden; background: #d6d2c7; border: 0; border-radius: 0; padding: 0; text-align: left; cursor: inherit; color: #fff; user-select: none; }
 .portrait-card img { display: block; height: 100%; width: 100%; object-fit: cover; pointer-events: none; }
-.portrait-caption { position: absolute; inset: auto 0 0; display: flex; justify-content: space-between; padding: 40px 16px 16px; color: white; font: 9px monospace; letter-spacing: 1px; background: linear-gradient(transparent,#0008); pointer-events: none; }
+.portrait-caption { position: absolute; inset: auto 0 0; display: flex; justify-content: space-between; gap: 12px; padding: 40px 16px 16px; color: white; font: 400 12px/1.5 var(--font-reading); letter-spacing: .02em; background: linear-gradient(transparent,#0009); pointer-events: none; }
 .portrait-caption > span:last-child { font: 18px sans-serif; }
 .portrait-card:focus-visible { outline: 2px solid #fafdf3; outline-offset: -5px; }
-.portrait-controls { display: flex; gap: 24px; align-items: center; justify-content: center; font: 9px monospace; letter-spacing: 1px; }
-.portrait-controls button { color: inherit; background: transparent; border: 1px solid #b5b4a7; padding: 10px 16px; cursor: pointer; }
+.portrait-controls { display: flex; gap: 20px; align-items: center; justify-content: center; font: 400 13px/1.5 var(--font-reading); letter-spacing: .02em; }
+.portrait-controls button { color: inherit; background: transparent; border: 1px solid #b5b4a7; padding: 10px 16px; font: inherit; cursor: pointer; }
 .portrait-controls button:hover, .portrait-viewer button:hover { background: #fff6; border-color: #77796c; }
 .portrait-controls button:focus-visible, .portrait-viewer button:focus-visible { outline: 2px solid #555e4a; outline-offset: 3px; }
 .portrait-stage--still { height: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding: 0 24px; }
@@ -23,8 +23,8 @@
 .portrait-viewer { position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; padding: 28px clamp(20px,5vw,80px); background: linear-gradient(180deg, #d8d4c9 0%, #e8e4da 32%, #f3f0e8 100%); color: #34362f; overflow: hidden; }
 .portrait-viewer[open] { display: flex; flex-direction: column; gap: 20px; }
 .portrait-viewer::backdrop { background: #e8e4da; }
-.portrait-viewer header, .portrait-viewer footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; font: 11px monospace; flex: none; padding: 0; }
-.portrait-viewer button { background: transparent; border: 1px solid #b5b4a7; color: inherit; padding: 10px 16px; cursor: pointer; }
+.portrait-viewer header, .portrait-viewer footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; font: 400 13px/1.6 var(--font-reading); flex: none; padding: 0; }
+.portrait-viewer button { background: transparent; border: 1px solid #b5b4a7; color: inherit; padding: 10px 16px; font: inherit; cursor: pointer; }
 .portrait-viewer .portrait-full-image { display: block; width: 100%; min-height: 0; flex: 1; object-fit: contain; }
 .portrait-viewer footer > span { text-align: center; }
 @media(max-width:640px) { .portraits { padding: 56px 0 32px; min-height: 0; gap: 28px; } .portrait-photo-layer { gap: 28px; } .portrait-stage { height: 370px; } .portrait-controls { gap: 16px; font-size: 8px; letter-spacing: 0; } .portrait-stage--still { height: auto; grid-template-columns: repeat(2,1fr); } .portrait-viewer { padding: 20px 16px; } }
@@ -33,9 +33,10 @@
 
 @media (max-width: 640px) {
   .portraits > header { padding-inline: 24px; }
-  .portraits > header > span { font-size: 11px; letter-spacing: .12em; }
+  .portraits > header > span { font-size: 11px; letter-spacing: .08em; }
   .portraits h2 { font-size: clamp(28px, 8vw, 36px); line-height: 1.35; letter-spacing: -.02em; margin: 14px 0 12px; }
-  .portraits p { font-size: 14px; line-height: 1.8; text-wrap: pretty; }
-  .portrait-caption { font-size: 11px; letter-spacing: .06em; }
-  .portrait-controls { font-size: 11px; gap: 14px; }
+  .portraits p { font-size: 15px; line-height: 1.8; }
+  .portrait-caption { font-size: 12px; letter-spacing: .02em; }
+  .portrait-controls { flex-wrap: wrap; padding-inline: 24px; font-size: 12px; gap: 10px 14px; }
+  .portrait-viewer header, .portrait-viewer footer { gap: 12px; font-size: 12px; }
 }
