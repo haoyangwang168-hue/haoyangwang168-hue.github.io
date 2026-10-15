@@ -139,3 +139,18 @@ test('positive modulo handles backward cycling and invalid geometry safely', () 
   assert.deepEqual(galleryFrames(NaN, 800, 600, 5), [])
   assert.deepEqual(galleryFrames(0, 800, 600, 0), [])
 })
+
+test('left neighbour is available for preloading before it enters, with ten fixed frames', () => {
+  const before = galleryFrames(0, 1200, 600, 20)
+  assert.equal(before.length, 10)
+  assert.equal(before[0].index, 19)
+  near(before[0].left + before[0].width, 0)
+  assert.ok(before[0].left + before[0].width > -240)
+  const after = galleryFrames(0.01, 1200, 600, 20)
+  const entering = after.find(frame => frame.index === 19)
+  assert.ok(entering.left < 0 && entering.left + entering.width > 0)
+  // Existing visible geometry remains the same: the first image is still 144px wide.
+  near(before[1].left, 0)
+  near(before[1].width, 144)
+  assert.equal(before[1].index, 0)
+})

@@ -1,175 +1,133 @@
 import { useEffect, type RefObject } from 'react'
-import { useMotionValue, type MotionValue } from 'framer-motion'
-import { workTouchScroll, workTouchSnap } from './work-touch.ts'
+import type { MotionValue } from 'framer-motion'
+import { workTouchSnap } from './work-touch.ts'
 
 interface Geometry { top: number; range: number; cardHeight: number }
-interface Drag extends Geometry {
+interface Gesture {
   id: number
   x: number
   y: number
-  lastX: number
-  lastY: number
-  scroll: number
-  rawTarget: number
-  target: number
-  moved: boolean
-  pageOutside: boolean
-  startProgress: number
-  previousStop: number
-  nextStop: number
   travel: number
+  moved: boolean
+  startProgress: number
+  lastScroll: number
+  direction: number
 }
 
+const IDLE_DELAY = 200
+const POSITION_TOLERANCE = 0.5
 const clamp = (value: number): number => Math.max(0, Math.min(1, value))
 
-/** Own mobile progress exclusively; synchronize the page only on release or exit. */
-export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement, deck: HTMLDivElement, progress: Pick<MotionValue<number>, 'get' | 'set'>, count: number): () => void {
-  let drag: Drag | null = null
+/** Observe native scrolling and snap only after both the finger and page have stopped. */
+export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement, deck: HTMLDivElement, _progress: Pick<MotionValue<number>, 'get' | 'set'>, count: number): () => void {
+  let gesture: Gesture | null = null
+  let touching = false
+  let snapping = false
+  let disposed = false
   let suppressClickUntil = 0
-  let scrollFrame: number | null = null
-  let settleFrame: number | null = null
-  let settling = false
-  let committedScroll: number | null = null
+  let idleTimer: number | null = null
+  let stableFrame: number | null = null
+
   const measure = (): Geometry => ({
     top: gallery.getBoundingClientRect().top + window.scrollY,
-    // Match document geometry, not the sticky stage's small-viewport height.
     range: Math.max(0, gallery.clientHeight - document.documentElement.clientHeight),
     cardHeight: deck.offsetHeight,
   })
-  let cachedGeometry = measure()
-  const refreshGeometry = (): Geometry => {
-    cachedGeometry = measure()
-    return cachedGeometry
+  const blocked = (): boolean => document.hidden || [document.body, document.documentElement]
+    .some(element => element && /^(hidden|clip)$/.test(element.style.overflow))
+  const cancelCheck = (): void => {
+    if (idleTimer !== null) window.clearTimeout(idleTimer)
+    if (stableFrame !== null) window.cancelAnimationFrame(stableFrame)
+    idleTimer = null
+    stableFrame = null
   }
-  const followPage = (): void => {
-    if (drag || settling) return
-    // Preserve the exact settled pose through our own scroll event and pixel rounding.
-    if (committedScroll !== null && Math.abs(window.scrollY - committedScroll) <= 1) return
-    committedScroll = null
-    const geometry = cachedGeometry
-    progress.set(geometry.range > 0 ? clamp((window.scrollY - geometry.top) / geometry.range) : 0)
-  }
-  const cancelScrollFrame = (): void => {
-    if (scrollFrame !== null) window.cancelAnimationFrame(scrollFrame)
-    scrollFrame = null
-  }
-  const onScroll = (): void => {
-    if (drag || settling || scrollFrame !== null) return
-    scrollFrame = window.requestAnimationFrame(() => {
-      scrollFrame = null
-      // Follow current scroll without measuring the offscreen deck every footer frame.
-      followPage()
-    })
-  }
-  const commit = (target: number): void => {
-    window.scrollTo({ top: target, behavior: 'instant' })
-    committedScroll = window.scrollY
-  }
-  const stopSettling = (): void => {
-    if (settleFrame !== null) window.cancelAnimationFrame(settleFrame)
-    settleFrame = null
-    if (settling) {
-      const geometry = refreshGeometry()
-      commit(geometry.top + progress.get() * geometry.range)
+  const interrupt = (): void => {
+    cancelCheck()
+    gesture = null
+    // Only our own smooth snap may be stopped; native momentum is never rewritten.
+    if (snapping) {
+      snapping = false
+      window.scrollTo({ top: window.scrollY, behavior: 'instant' })
     }
-    settling = false
   }
-  const end = (snap = false): void => {
-    if (!drag) return
-    const finished = drag
-    if (finished.moved) {
-      suppressClickUntil = performance.now() + 750
-      if (snap && !finished.pageOutside) {
-        const from = progress.get()
-        const to = workTouchSnap(finished.startProgress, finished.travel, finished.cardHeight, count)
-        if (Math.abs(from - to) < 0.000001) {
-          progress.set(to)
-          const geometry = refreshGeometry()
-          commit(geometry.top + to * geometry.range)
-          drag = null
-          suppressClickUntil = performance.now() + 350
-          return
-        }
-        settling = true
-        drag = null
-        let started: number | null = null
-        const tick = (now: number): void => {
-          if (started === null) started = now
-          const t = Math.min(1, (now - started) / 280)
-          progress.set(from + (to - from) * (1 - (1 - t) ** 3))
-          if (t < 1) { settleFrame = window.requestAnimationFrame(tick); return }
-          settleFrame = null
-          const geometry = refreshGeometry()
-          commit(geometry.top + to * geometry.range)
-          settling = false
-          suppressClickUntil = performance.now() + 350
-        }
-        settleFrame = window.requestAnimationFrame(tick)
-        return
-      }
-      commit(finished.target)
+  const settle = (): void => {
+    if (snapping) { snapping = false; return }
+    const finished = gesture
+    gesture = null
+    if (!finished?.moved || touching || blocked()) return
+    const geometry = measure()
+    const current = (window.scrollY - geometry.top) / geometry.range
+    // Leaving either edge belongs to the surrounding page, including native inertia.
+    if (geometry.range <= 0 || geometry.cardHeight <= 0 || current < 0 || current > 1) return
+    const target = workTouchSnap(finished.startProgress, current, finished.travel, geometry.cardHeight, count, finished.direction)
+    const destination = geometry.top + target * geometry.range
+    if (Math.abs(destination - window.scrollY) <= 1) return
+    snapping = true
+    window.scrollTo({ top: destination, behavior: 'smooth' })
+    scheduleIdle()
+  }
+  const verifyStopped = (): void => {
+    cancelCheck()
+    if (touching || blocked()) { gesture = null; return }
+    let previous = window.scrollY
+    let frames = 0
+    const check = (): void => {
+      stableFrame = null
+      if (disposed || touching || blocked()) { gesture = null; return }
+      if (Math.abs(window.scrollY - previous) > POSITION_TOLERANCE) { scheduleIdle(); return }
+      previous = window.scrollY
+      if (++frames < 2) { stableFrame = window.requestAnimationFrame(check); return }
+      settle()
     }
-    drag = null
-    followPage()
+    stableFrame = window.requestAnimationFrame(check)
+  }
+  function scheduleIdle(): void {
+    cancelCheck()
+    if (disposed || touching || (!gesture && !snapping)) return
+    idleTimer = window.setTimeout(() => { idleTimer = null; verifyStopped() }, IDLE_DELAY)
+  }
+  const scroll = (): void => {
+    if (blocked()) { interrupt(); return }
+    if (gesture) {
+      const step = window.scrollY - gesture.lastScroll
+      if (Math.abs(step) > POSITION_TOLERANCE) gesture.direction = Math.sign(step)
+      gesture.lastScroll = window.scrollY
+    }
+    if (!touching) scheduleIdle()
+  }
+  const scrollEnd = (): void => {
+    if (!touching && (gesture || snapping)) verifyStopped()
   }
   const start = (event: TouchEvent): void => {
-    end()
-    stopSettling()
+    interrupt()
+    touching = event.touches.length > 0
     suppressClickUntil = 0
-    if (event.touches.length !== 1) return
-    const geometry = refreshGeometry()
-    // Keep entry/exit scrolling native until the deck is actually pinned.
+    if (event.touches.length !== 1 || blocked()) return
+    const geometry = measure()
     if (geometry.range <= 0 || geometry.cardHeight <= 0 || window.scrollY < geometry.top || window.scrollY > geometry.top + geometry.range) return
-    cancelScrollFrame()
     const touch = event.touches[0]
-    const retained = committedScroll !== null && Math.abs(window.scrollY - committedScroll) <= 1
-    const scroll = retained ? geometry.top + progress.get() * geometry.range : window.scrollY
-    if (retained && Math.abs(scroll - window.scrollY) > 1) commit(scroll)
-    progress.set(clamp((scroll - geometry.top) / geometry.range))
-    const startProgress = progress.get()
-    drag = { ...geometry, id: touch.identifier, x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastY: touch.clientY, scroll, rawTarget: scroll, target: scroll, moved: false, pageOutside: false, startProgress, previousStop: workTouchSnap(startProgress, -geometry.cardHeight, geometry.cardHeight, count), nextStop: workTouchSnap(startProgress, geometry.cardHeight, geometry.cardHeight, count), travel: 0 }
+    gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, travel: 0, moved: false, startProgress: clamp((window.scrollY - geometry.top) / geometry.range), lastScroll: window.scrollY, direction: 0 }
   }
   const move = (event: TouchEvent): void => {
-    if (!drag) return
-    if (event.touches.length !== 1 || !event.cancelable) { end(); return }
-    const touch = Array.from(event.touches).find(item => item.identifier === drag?.id)
-    if (!touch) { end(); return }
-    const delta = drag.y - touch.clientY
-    if (!drag.moved && Math.abs(touch.clientX - drag.x) >= 5 && Math.abs(touch.clientX - drag.x) > Math.abs(delta)) { end(); return }
-    if (!drag.moved) {
-      // Outward boundary gestures belong to native scrolling, including its inertia.
-      if ((drag.startProgress === 0 && delta < 0) || (drag.startProgress === 1 && delta > 0)) { end(); return }
-      if (Math.abs(delta) < 5) return
+    if (!gesture) return
+    if (event.touches.length !== 1) { interrupt(); return }
+    const touch = Array.from(event.touches).find(item => item.identifier === gesture?.id)
+    if (!touch) { interrupt(); return }
+    const delta = gesture.y - touch.clientY
+    if (!gesture.moved && Math.abs(touch.clientX - gesture.x) >= 5 && Math.abs(touch.clientX - gesture.x) > Math.abs(delta)) { interrupt(); return }
+    gesture.travel = delta
+    if (Math.abs(delta) >= 5) {
+      gesture.moved = true
+      suppressClickUntil = performance.now() + 750
     }
-    event.preventDefault()
-    drag.travel += drag.lastY - touch.clientY
-    drag.lastX = touch.clientX
-    drag.lastY = touch.clientY
-    drag.moved = true
-    suppressClickUntil = performance.now() + 750
-    drag.rawTarget = workTouchScroll(drag.scroll, delta, drag.top, drag.range, count, drag.cardHeight)
-    drag.target = drag.rawTarget
-    // Match the release destination so a long swipe cannot overshoot then animate back.
-    // The endpoint intervals still permit 1:1 overflow into neighboring page sections.
-    if (drag.previousStop > 0) drag.target = Math.max(drag.top + drag.previousStop * drag.range, drag.target)
-    if (drag.nextStop < 1) drag.target = Math.min(drag.top + drag.nextStop * drag.range, drag.target)
-    progress.set(clamp((drag.target - drag.top) / drag.range))
-    const outside = drag.target < drag.top || drag.target > drag.top + drag.range
-    // Past either boundary, use normal 1:1 page movement, including reversal.
-    if (outside || drag.pageOutside) window.scrollTo({ top: drag.target, behavior: 'instant' })
-    drag.pageOutside = outside
   }
-  const resize = (): void => {
-    cancelScrollFrame()
-    const geometry = refreshGeometry()
-    if (!drag) { followPage(); return }
-    if (geometry.range <= 0 || geometry.cardHeight <= 0) { end(); return }
-    const target = drag.pageOutside ? window.scrollY : geometry.top + progress.get() * geometry.range
-    const scroll = drag.pageOutside ? target : geometry.top + (drag.rawTarget - drag.top) / drag.range * geometry.range
-    // Toolbar/viewport changes rebase the finger origin without ending the drag.
-    // Retain uncapped travel so reversing a long swipe still returns to its origin.
-    Object.assign(drag, geometry, { scroll, rawTarget: scroll, target, x: drag.lastX, y: drag.lastY })
+  const release = (event: TouchEvent): void => {
+    touching = event.touches.length > 0
+    if (touching || !gesture?.moved) { interrupt(); return }
+    suppressClickUntil = performance.now() + 350
+    scheduleIdle()
   }
+  const cancel = (): void => { touching = false; interrupt() }
   const click = (event: MouseEvent): void => {
     if (event.detail !== 0 && performance.now() < suppressClickUntil) {
       event.preventDefault()
@@ -177,56 +135,64 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
       suppressClickUntil = 0
     }
   }
-  const release = (): void => { end(true) }
-  const cancel = (): void => { end(); stopSettling() }
-  const interrupt = (): void => { stopSettling(); committedScroll = null }
-  // Upstream images and fonts can move the gallery without a viewport resize.
-  const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+  const outsideClick = (event: MouseEvent): void => {
+    if (!stage.contains(event.target as Node | null)) interrupt()
+  }
+  // Observe geometry changes without adjusting the document under a moving finger.
+  const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(interrupt)
   observer?.observe(gallery)
   observer?.observe(deck)
   if (document.body) observer?.observe(document.body)
-  document.addEventListener('load', resize, true)
-  document.fonts?.addEventListener('loadingdone', resize)
-  followPage()
   stage.addEventListener('touchstart', start, { passive: true })
-  stage.addEventListener('touchmove', move, { passive: false })
+  stage.addEventListener('touchmove', move, { passive: true })
   stage.addEventListener('touchend', release, { passive: true })
   stage.addEventListener('touchcancel', cancel, { passive: true })
   stage.addEventListener('click', click, true)
-  window.addEventListener('scroll', onScroll, { passive: true })
-  window.addEventListener('resize', resize)
+  // Capture new input before stage handlers so a fresh gesture can replace a snap.
+  document.addEventListener('touchstart', interrupt, { passive: true, capture: true })
+  document.addEventListener('click', outsideClick, true)
+  document.addEventListener('scrollend', scrollEnd)
+  document.addEventListener('visibilitychange', interrupt)
+  document.addEventListener('load', interrupt, true)
+  document.fonts?.addEventListener('loadingdone', interrupt)
+  window.addEventListener('scroll', scroll, { passive: true })
+  window.addEventListener('resize', interrupt)
   window.addEventListener('blur', cancel)
   window.addEventListener('wheel', interrupt, { passive: true })
   window.addEventListener('keydown', interrupt)
+  window.addEventListener('hashchange', interrupt)
   return () => {
-    end()
-    stopSettling()
-    cancelScrollFrame()
+    disposed = true
+    interrupt()
     observer?.disconnect()
-    document.removeEventListener('load', resize, true)
-    document.fonts?.removeEventListener('loadingdone', resize)
     stage.removeEventListener('touchstart', start)
     stage.removeEventListener('touchmove', move)
     stage.removeEventListener('touchend', release)
     stage.removeEventListener('touchcancel', cancel)
     stage.removeEventListener('click', click, true)
-    window.removeEventListener('scroll', onScroll)
-    window.removeEventListener('resize', resize)
+    document.removeEventListener('touchstart', interrupt, true)
+    document.removeEventListener('click', outsideClick, true)
+    document.removeEventListener('scrollend', scrollEnd)
+    document.removeEventListener('visibilitychange', interrupt)
+    document.removeEventListener('load', interrupt, true)
+    document.fonts?.removeEventListener('loadingdone', interrupt)
+    window.removeEventListener('scroll', scroll)
+    window.removeEventListener('resize', interrupt)
     window.removeEventListener('blur', cancel)
     window.removeEventListener('wheel', interrupt)
     window.removeEventListener('keydown', interrupt)
+    window.removeEventListener('hashchange', interrupt)
   }
 }
 
-/** Desktop retains its scroll value; mobile uses a separate, single-owner value. */
+/** The document scroll value owns every card pose on desktop and touch devices. */
 export function useWorkCardTouch(galleryRef: RefObject<HTMLDivElement | null>, stageRef: RefObject<HTMLDivElement | null>, deckRef: RefObject<HTMLDivElement | null>, scrollProgress: MotionValue<number>, enabled: boolean, count: number): MotionValue<number> {
-  const touchProgress = useMotionValue(0)
   useEffect(() => {
     const gallery = galleryRef.current
     const stage = stageRef.current
     const deck = deckRef.current
     if (!enabled || !gallery || !stage || !deck) return
-    return bindWorkCardTouch(gallery, stage, deck, touchProgress, count)
-  }, [galleryRef, stageRef, deckRef, touchProgress, enabled, count])
-  return enabled ? touchProgress : scrollProgress
+    return bindWorkCardTouch(gallery, stage, deck, scrollProgress, count)
+  }, [galleryRef, stageRef, deckRef, scrollProgress, enabled, count])
+  return scrollProgress
 }

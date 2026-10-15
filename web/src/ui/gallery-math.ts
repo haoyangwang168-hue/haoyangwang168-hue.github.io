@@ -12,7 +12,7 @@ export const GALLERY_SLOTS = 10
 
 /** Tie each stream item to a physical node until that item has left the visible window. */
 export function gallerySlot(progress: number, order: number): number {
-  return wrapIndex(Math.floor(-progress) + order, GALLERY_SLOTS)
+  return wrapIndex(Math.floor(-progress) - 1 + order, GALLERY_SLOTS)
 }
 
 /** Accumulate wheel bursts, but discard an unfinished destination when direction reverses. */
@@ -74,7 +74,8 @@ export function galleryEdge(position: number, width: number): number {
 /** Recycle a fixed number of slots; no DOM nodes accumulate during an infinite loop. */
 export function galleryFrames(progress: number, width: number, height: number, count: number): GalleryFrame[] {
   if (![progress, width, height].every(Number.isFinite) || width <= 0 || height <= 0 || !Number.isInteger(count) || count <= 0) return []
-  const start = Math.floor(-progress)
+  // Keep the next left-hand image in a stable slot before it enters the viewport.
+  const start = Math.floor(-progress) - 1
   return Array.from({ length: GALLERY_SLOTS }, (_, slot) => {
     const stream = start + slot
     const left = galleryEdge(stream + progress, width)

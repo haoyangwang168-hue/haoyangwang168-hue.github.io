@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { portraitInertia, portraitParallax, portraitPosition } from './portrait-math'
 import { galleryWheelStep } from './gallery-math'
 import { responsiveImage } from '../data/responsiveImage'
+import ProgressiveImage from './ProgressiveImage'
 import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import './portrait-gallery.css'
 
@@ -33,6 +34,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
   const drag = useRef<PortraitDrag | null>(null)
   const suppressClickUntil = useRef(0)
   const [selected, setSelected] = useState<number | null>(null)
+  const previewSources = useRef(new Map<number, string>())
   const reduced = usePrefersReducedMotion()
   const compact = useIsCompact()
   const native = useMobileInput()
@@ -212,6 +214,8 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
           aria-label={`${zh ? '放大照片' : 'View photograph'}: ${LABELS[lang][index % 4]}`}
           onClick={event => {
             if (event.detail > 0 && performance.now() < suppressClickUntil.current) return
+            const preview = event.currentTarget.querySelector('img')?.currentSrc
+            if (preview) previewSources.current.set(index % 4, preview)
             setSelected(index % 4)
           }}>
           <img {...responsiveImage(photoUrl(index % 4))} sizes="(max-width: 640px) 78vw, 360px" alt={LABELS[lang][index % 4]} style={{ objectPosition: PHOTO_FRAMING[index % 4].position, transformOrigin: PHOTO_FRAMING[index % 4].origin }} loading="lazy" decoding="async" draggable={false} />
@@ -223,7 +227,7 @@ export default function PortraitGallery({ lang }: { lang: 'zh' | 'en' }) {
     {selected !== null && <dialog ref={dialogRef} className="portrait-viewer" aria-label={LABELS[lang][selected]} onCancel={event => { event.preventDefault(); setSelected(null) }}
       onClick={event => { if (event.target === event.currentTarget) setSelected(null) }}>
       <header><span>HAOYANG / {String(selected + 1).padStart(2, '0')}—04</span><button autoFocus onClick={() => setSelected(null)}>{zh ? '返回' : 'Back'} ×</button></header>
-      <img className="portrait-full-image" src={photoUrl(selected)} alt={LABELS[lang][selected]} />
+      <ProgressiveImage className="portrait-full-image" src={photoUrl(selected)} alt={LABELS[lang][selected]} lang={lang} previewSrc={previewSources.current.get(selected)} />
       <footer><button aria-label={zh ? '上一张大图' : 'Previous full-size photo'} onClick={() => setSelected((selected + 3) % 4)}>←</button><span>{LABELS[lang][selected]}</span><button aria-label={zh ? '下一张大图' : 'Next full-size photo'} onClick={() => setSelected((selected + 1) % 4)}>→</button></footer>
     </dialog>}
   </section>

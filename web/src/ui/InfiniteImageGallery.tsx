@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type PointerEvent, type SyntheticEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import type { WorkImage } from '../data/workMedia'
 import { responsiveImage } from '../data/responsiveImage'
 import { createGalleryImageSlot } from './gallery-image-slot'
+import ProgressiveImage from './ProgressiveImage'
 import { advanceGalleryMotion, galleryFrames, galleryImageScale, gallerySlot, galleryWheelStep, galleryWheelTarget, GALLERY_SLOTS, wrapIndex } from './gallery-math'
 import { usePrefersReducedMotion } from './useParallax'
 import './image-gallery.css'
@@ -28,26 +29,16 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
   const [expanded, setExpanded] = useState(false)
   const [stopped, setStopped] = useState(false)
   const failedImages = useRef(new Set<HTMLImageElement>())
+  const previewSources = useRef(new Map<string, string>())
   const [hasImageError, setHasImageError] = useState(false)
   const still = reduced || expanded
   const image = images[selected]
   const zh = lang === 'zh'
 
-  const imageLoaded = (event: SyntheticEvent<HTMLImageElement>): void => {
-    failedImages.current.delete(event.currentTarget)
-    setHasImageError(failedImages.current.size > 0)
-    wake.current()
-  }
-  const imageFailed = (event: SyntheticEvent<HTMLImageElement>): void => {
-    failedImages.current.add(event.currentTarget)
-    setHasImageError(true)
-  }
   const retryImages = (): void => {
     retryGallery.current()
     for (const picture of failedImages.current) {
       if (!picture.isConnected) failedImages.current.delete(picture)
-      // Use the live URL: recycled slots may now represent a different photograph.
-      else if (!picture.dataset.galleryPreview) picture.setAttribute('src', picture.src)
     }
     setHasImageError(failedImages.current.size > 0)
     wake.current()
@@ -77,6 +68,8 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
     let height = stage.clientHeight
     let baseWidth = Math.min(width, height * 0.8)
     const layers = slots.current.map(button => ({ button, loader: button ? createGalleryImageSlot(button, (picture, state) => {
+      const asset = images[Number(button.dataset.imageIndex)]
+      if (state === 'ready' && asset) previewSources.current.set(asset.src, picture.currentSrc || picture.src)
       if (state === 'error') failedImages.current.add(picture)
       else failedImages.current.delete(picture)
       setHasImageError(failedImages.current.size > 0)
@@ -137,7 +130,9 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
           button.dataset.imageIndex = String(box.index)
           button.setAttribute('aria-label', asset.alt)
           const preview = responsiveImage(asset.src)
-          loader?.assign({ src: preview.src, srcSet: preview.srcSet, alt: asset.alt })
+          // Cover crops can render wider than their frame, especially landscape photos.
+          const aspect = preview.width && preview.height ? preview.width / preview.height : 1
+          loader?.assign({ src: preview.src, srcSet: preview.srcSet, alt: asset.alt, displayWidth: Math.max(box.width, box.height * aspect) })
           if (!onscreen) continue
           const picture = loader?.image()
           button.style.transform = `translate3d(${box.left}px, 0, 0) scale(${box.width / baseWidth}, ${box.height / height})`
@@ -254,7 +249,7 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
         ))}
         <span className="image-flow-hint" aria-hidden="true">{zh ? '拖动或滚轮探索 ↔' : 'Drag or scroll to explore ↔'}</span>
       </div>
-      {still && <div className="image-flow-full"><img src={image.src} alt={image.alt} decoding="async" onLoad={imageLoaded} onError={imageFailed} /></div>}
+      {still && <div className="image-flow-full"><ProgressiveImage src={image.src} alt={image.alt} lang={lang} previewSrc={previewSources.current.get(image.src)} /></div>}
       {hasImageError && <div className="image-flow-status" role="status"><span>{zh ? '部分图片加载失败，请重试。' : 'Some images could not load. Please retry.'}</span><button type="button" onClick={retryImages}>{zh ? '重新加载图片' : 'Reload images'}</button></div>}
       <div
         className="image-flow-controls"
