@@ -57,12 +57,21 @@ function eventTarget() {
 function fixture(t, initial = 0.12) {
   const previousWindow = globalThis.window
   const previousDocument = globalThis.document
+  const previousResizeObserver = globalThis.ResizeObserver
   const calls = []
   const values = []
   const frames = new Map()
   let frameId = 0
   let current = 0
   let prevented = 0
+  const reads = { top: 0, height: 0, deck: 0 }
+  const layout = { top, height: 9900, cardHeight: height }
+  const observers = []
+  globalThis.ResizeObserver = class {
+    constructor(callback) { this.callback = callback; this.targets = []; observers.push(this) }
+    observe(target) { this.targets.push(target) }
+    disconnect() { this.targets = [] }
+  }
   const documentRoot = { clientHeight: 900 }
   const host = {
     ...eventTarget(), scrollY: at(initial),
@@ -76,21 +85,23 @@ function fixture(t, initial = 0.12) {
     },
   }
   globalThis.window = host
-  globalThis.document = { documentElement: documentRoot }
+  const doc = { ...eventTarget(), documentElement: documentRoot, body: {}, fonts: eventTarget() }
+  globalThis.document = doc
   const stage = { ...eventTarget(), offsetHeight: 800 }
   // The sticky stage is deliberately 100px shorter than the document viewport.
-  const gallery = { clientHeight: 9900, getBoundingClientRect: () => ({ top: top - host.scrollY }) }
-  const deck = { offsetHeight: height }
+  const gallery = { get clientHeight() { reads.height++; return layout.height }, getBoundingClientRect: () => { reads.top++; return { top: layout.top - host.scrollY } } }
+  const deck = { get offsetHeight() { reads.deck++; return layout.cardHeight } }
   const progress = { get: () => current, set: value => { current = value; values.push(value) } }
   const dispose = bindWorkCardTouch(gallery, stage, deck, progress, count)
   t.after(() => {
     dispose()
     if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow
     if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument
+    if (previousResizeObserver === undefined) delete globalThis.ResizeObserver; else globalThis.ResizeObserver = previousResizeObserver
   })
   const finger = y => ({ identifier: 1, clientX: 150, clientY: y })
   return {
-    host, stage, gallery, deck, documentRoot, calls, values, frames, progress, dispose, finger,
+    host, stage, gallery, deck, documentRoot, doc, layout, reads, observers, calls, values, frames, progress, dispose, finger,
     start: y => stage.send('touchstart', { touches: [finger(y)] }),
     move: y => stage.send('touchmove', { touches: [finger(y)], cancelable: true, preventDefault: () => prevented++ }),
     end: () => stage.send('touchend'),
@@ -105,7 +116,7 @@ test('local drag ignores scroll notifications and performs zero page writes unti
   f.host.send('scroll') // A frame queued before touching must not replay the old position.
   f.start(600)
   f.move(598)
-  assert.equal(f.prevented(), 1)
+  assert.equal(f.prevented(), 0)
   f.move(400)
   near(f.progress.get(), 0.185)
   near(f.host.scrollY, at(0.12))
@@ -177,7 +188,12 @@ test('upward exit and pre-entry gestures preserve normal document scrolling', t 
   const f = fixture(t, 0)
   f.start(500)
   f.move(580)
-  near(f.host.scrollY, top - 80)
+  assert.equal(f.prevented(), 0)
+  assert.equal(f.calls.length, 0)
+  // Native scrolling supplies the movement; the handler must leave it untouched.
+  f.host.scrollY = top - 80
+  f.host.send('scroll')
+  f.flush()
   near(f.progress.get(), 0)
   f.cancel()
   const countBefore = f.calls.length
@@ -212,6 +228,9 @@ test('tap, drag-click suppression, cancellation, multitouch and cleanup remain s
   f.dispose()
   assert.equal(f.stage.listeners.size, 0)
   assert.equal(f.host.listeners.size, 0)
+  assert.equal(f.doc.listeners.size, 0)
+  assert.equal(f.doc.fonts.listeners.size, 0)
+  assert.equal(f.observers[0].targets.length, 0)
   assert.equal(f.frames.size, 0)
 })
 
@@ -285,4 +304,74 @@ test('a new touch interrupts settling with no remaining animation callback', t =
   assert.equal(f.frames.size, 0)
   f.move(550)
   assert.ok(f.progress.get() < mid)
+})
+
+test('outward swipe from the completed deck remains native, while inward swipe still controls cards', t => {
+  const f = fixture(t, 1)
+  f.start(600)
+  f.move(598)
+  f.move(500)
+  f.end()
+  assert.equal(f.prevented(), 0)
+  assert.equal(f.calls.length, 0)
+  assert.equal(f.frames.size, 0)
+  near(f.progress.get(), 1)
+  f.start(500)
+  f.move(600)
+  assert.equal(f.prevented(), 1)
+  assert.ok(f.progress.get() < 1)
+})
+
+for (const [initial, destination, delta] of [[0, 0.12, 600], [0.12, 0.315, 700], [0.445, 0.315, -1400]]) {
+  test(`long swipe from ${initial} stops at ${destination} without a reverse settling animation`, t => {
+    const f = fixture(t, initial)
+    f.start(700)
+    f.move(700 - delta)
+    near(f.progress.get(), destination)
+    assert.equal(f.calls.length, 0)
+    f.end()
+    assert.equal(f.frames.size, 0)
+    f.flush(0)
+    near(f.progress.get(), destination)
+    f.flush(140)
+    near(f.progress.get(), destination)
+    f.flush(280)
+    near(f.progress.get(), destination)
+    near(f.host.scrollY, at(destination))
+  })
+}
+
+test('long swipe reversal stays exact when a toolbar resize occurs at the capped pose', t => {
+  const f = fixture(t, 0.12)
+  f.start(700)
+  f.move(0)
+  near(f.progress.get(), 0.315)
+  f.documentRoot.clientHeight = 1000
+  f.host.send('resize')
+  f.move(0)
+  near(f.progress.get(), 0.315)
+  f.move(700)
+  near(f.progress.get(), 0.12)
+  assert.equal(f.calls.length, 0)
+})
+
+test('footer scrolling reuses geometry and observed upstream layout changes refresh the gallery position', t => {
+  const f = fixture(t, 1)
+  const readsBefore = { ...f.reads }
+  for (let step = 1; step <= 8; step++) {
+    f.host.scrollY = at(1) + step * 80
+    f.host.send('scroll')
+    f.flush()
+  }
+  assert.deepEqual(f.reads, readsBefore)
+  near(f.progress.get(), 1)
+  assert.ok(f.observers[0].targets.includes(f.doc.body))
+  f.layout.top += 240
+  f.host.scrollY = f.layout.top + range * 0.5
+  f.observers[0].callback()
+  near(f.progress.get(), 0.5)
+  assert.equal(f.reads.top, readsBefore.top + 1)
+  f.layout.top += 100
+  f.doc.send('load')
+  near(f.progress.get(), (f.host.scrollY - f.layout.top) / range)
 })

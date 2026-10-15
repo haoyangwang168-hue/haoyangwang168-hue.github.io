@@ -56,3 +56,10 @@ export function workCardPose(progress: number, index: number, count: number, mob
 export function workCardStop(index: number, count: number): number {
   return count > 0 ? 0.3 + 0.65 * Math.max(0, Math.min(count - 1, index)) / count : 0
 }
+
+/** Turn a single mobile surface, switching its content at the edge-on midpoint. */
+export function workCardSurfaceRotation(angle: number, mobile: boolean): number {
+  const rotation = Number.isFinite(angle) ? Math.max(0, Math.min(180, angle)) : 0
+  // The desktop back has its own 180deg transform. Mobile uses a flat back face.
+  return mobile && rotation >= 90 ? rotation - 180 : rotation
+}

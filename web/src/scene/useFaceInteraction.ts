@@ -100,7 +100,8 @@ export function useFaceInteraction(model: THREE.Object3D) {
     const release = (): void => { input.current.hold = false; input.current.id = -1; input.current.dx = 0; input.current.dy = 0 }
     const up = (event: PointerEvent): void => { if (event.pointerId === input.current.id) release() }
     const cancel = (event: KeyboardEvent): void => { if (event.key === 'Escape') release() }
-    const scroll = (): void => { if (!active()) release() }
+    // Idle cheeks need no hero layout measurement while cards and the footer scroll.
+    const scroll = (): void => { if (input.current.hold && !active()) release() }
     window.addEventListener('pointerdown', down, { passive: false })
     window.addEventListener('pointermove', move, { passive: false })
     window.addEventListener('pointerup', up)

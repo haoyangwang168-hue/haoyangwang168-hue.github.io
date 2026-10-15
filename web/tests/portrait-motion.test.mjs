@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { portraitInertia, portraitParallax, portraitPosition, workCardPose, workCardStop } from '../src/ui/portrait-math.ts'
+import { portraitInertia, portraitParallax, portraitPosition, workCardPose, workCardStop, workCardSurfaceRotation } from '../src/ui/portrait-math.ts'
 
 test('portrait cycles preserve positions after complete forward and backward laps', () => {
   for (let index = 0; index < 12; index++) {
@@ -150,4 +150,19 @@ test('incoming cards move while their predecessor is visible and settle at uncha
     }
     assert.deepEqual(workCardPose(stop - interval * 0.25, index, count), middle)
   }
+})
+
+test('mobile face swapping keeps the visible orientation and settles to a flat card', () => {
+  // Front: 0 -> 45 -> edge. Back: edge -> -45 -> 0, equivalent to parent + back's 180deg.
+  for (const [angle, mobile] of [[0, 0], [45, 45], [90, -90], [135, -45], [180, 0]]) {
+    assert.equal(workCardSurfaceRotation(angle, true), mobile)
+    assert.equal(workCardSurfaceRotation(angle, false), angle)
+    const oldVisibleAngle = angle < 90 ? angle : angle + 180
+    assert.ok(Math.abs(Math.cos(oldVisibleAngle * Math.PI / 180) - Math.cos(mobile * Math.PI / 180)) < 1e-12)
+    assert.ok(Math.abs(Math.sin(oldVisibleAngle * Math.PI / 180) - Math.sin(mobile * Math.PI / 180)) < 1e-12)
+  }
+  for (const progress of [0.3, 0.445, 0.575, 0.705, 0.835, 1]) {
+    assert.equal(workCardSurfaceRotation(workCardPose(progress, 0, 5, true).rotateY, true), 0)
+  }
+  assert.equal(workCardSurfaceRotation(NaN, true), 0)
 })

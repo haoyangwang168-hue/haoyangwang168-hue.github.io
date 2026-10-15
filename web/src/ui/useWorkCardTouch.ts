@@ -10,10 +10,13 @@ interface Drag extends Geometry {
   lastX: number
   lastY: number
   scroll: number
+  rawTarget: number
   target: number
   moved: boolean
   pageOutside: boolean
   startProgress: number
+  previousStop: number
+  nextStop: number
   travel: number
 }
 
@@ -33,12 +36,17 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     range: Math.max(0, gallery.clientHeight - document.documentElement.clientHeight),
     cardHeight: deck.offsetHeight,
   })
+  let cachedGeometry = measure()
+  const refreshGeometry = (): Geometry => {
+    cachedGeometry = measure()
+    return cachedGeometry
+  }
   const followPage = (): void => {
     if (drag || settling) return
     // Preserve the exact settled pose through our own scroll event and pixel rounding.
     if (committedScroll !== null && Math.abs(window.scrollY - committedScroll) <= 1) return
     committedScroll = null
-    const geometry = measure()
+    const geometry = cachedGeometry
     progress.set(geometry.range > 0 ? clamp((window.scrollY - geometry.top) / geometry.range) : 0)
   }
   const cancelScrollFrame = (): void => {
@@ -49,7 +57,7 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     if (drag || settling || scrollFrame !== null) return
     scrollFrame = window.requestAnimationFrame(() => {
       scrollFrame = null
-      // Read current geometry rather than replaying a previously sampled progress.
+      // Follow current scroll without measuring the offscreen deck every footer frame.
       followPage()
     })
   }
@@ -61,7 +69,7 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     if (settleFrame !== null) window.cancelAnimationFrame(settleFrame)
     settleFrame = null
     if (settling) {
-      const geometry = measure()
+      const geometry = refreshGeometry()
       commit(geometry.top + progress.get() * geometry.range)
     }
     settling = false
@@ -74,6 +82,14 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
       if (snap && !finished.pageOutside) {
         const from = progress.get()
         const to = workTouchSnap(finished.startProgress, finished.travel, finished.cardHeight, count)
+        if (Math.abs(from - to) < 0.000001) {
+          progress.set(to)
+          const geometry = refreshGeometry()
+          commit(geometry.top + to * geometry.range)
+          drag = null
+          suppressClickUntil = performance.now() + 350
+          return
+        }
         settling = true
         drag = null
         let started: number | null = null
@@ -83,7 +99,7 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
           progress.set(from + (to - from) * (1 - (1 - t) ** 3))
           if (t < 1) { settleFrame = window.requestAnimationFrame(tick); return }
           settleFrame = null
-          const geometry = measure()
+          const geometry = refreshGeometry()
           commit(geometry.top + to * geometry.range)
           settling = false
           suppressClickUntil = performance.now() + 350
@@ -101,7 +117,7 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     stopSettling()
     suppressClickUntil = 0
     if (event.touches.length !== 1) return
-    const geometry = measure()
+    const geometry = refreshGeometry()
     // Keep entry/exit scrolling native until the deck is actually pinned.
     if (geometry.range <= 0 || geometry.cardHeight <= 0 || window.scrollY < geometry.top || window.scrollY > geometry.top + geometry.range) return
     cancelScrollFrame()
@@ -110,7 +126,8 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     const scroll = retained ? geometry.top + progress.get() * geometry.range : window.scrollY
     if (retained && Math.abs(scroll - window.scrollY) > 1) commit(scroll)
     progress.set(clamp((scroll - geometry.top) / geometry.range))
-    drag = { ...geometry, id: touch.identifier, x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastY: touch.clientY, scroll, target: scroll, moved: false, pageOutside: false, startProgress: progress.get(), travel: 0 }
+    const startProgress = progress.get()
+    drag = { ...geometry, id: touch.identifier, x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastY: touch.clientY, scroll, rawTarget: scroll, target: scroll, moved: false, pageOutside: false, startProgress, previousStop: workTouchSnap(startProgress, -geometry.cardHeight, geometry.cardHeight, count), nextStop: workTouchSnap(startProgress, geometry.cardHeight, geometry.cardHeight, count), travel: 0 }
   }
   const move = (event: TouchEvent): void => {
     if (!drag) return
@@ -119,14 +136,23 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     if (!touch) { end(); return }
     const delta = drag.y - touch.clientY
     if (!drag.moved && Math.abs(touch.clientX - drag.x) >= 5 && Math.abs(touch.clientX - drag.x) > Math.abs(delta)) { end(); return }
+    if (!drag.moved) {
+      // Outward boundary gestures belong to native scrolling, including its inertia.
+      if ((drag.startProgress === 0 && delta < 0) || (drag.startProgress === 1 && delta > 0)) { end(); return }
+      if (Math.abs(delta) < 5) return
+    }
     event.preventDefault()
     drag.travel += drag.lastY - touch.clientY
     drag.lastX = touch.clientX
     drag.lastY = touch.clientY
-    if (!drag.moved && Math.abs(delta) < 5) return
     drag.moved = true
     suppressClickUntil = performance.now() + 750
-    drag.target = workTouchScroll(drag.scroll, delta, drag.top, drag.range, count, drag.cardHeight)
+    drag.rawTarget = workTouchScroll(drag.scroll, delta, drag.top, drag.range, count, drag.cardHeight)
+    drag.target = drag.rawTarget
+    // Match the release destination so a long swipe cannot overshoot then animate back.
+    // The endpoint intervals still permit 1:1 overflow into neighboring page sections.
+    if (drag.previousStop > 0) drag.target = Math.max(drag.top + drag.previousStop * drag.range, drag.target)
+    if (drag.nextStop < 1) drag.target = Math.min(drag.top + drag.nextStop * drag.range, drag.target)
     progress.set(clamp((drag.target - drag.top) / drag.range))
     const outside = drag.target < drag.top || drag.target > drag.top + drag.range
     // Past either boundary, use normal 1:1 page movement, including reversal.
@@ -135,12 +161,14 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
   }
   const resize = (): void => {
     cancelScrollFrame()
+    const geometry = refreshGeometry()
     if (!drag) { followPage(); return }
-    const geometry = measure()
     if (geometry.range <= 0 || geometry.cardHeight <= 0) { end(); return }
     const target = drag.pageOutside ? window.scrollY : geometry.top + progress.get() * geometry.range
+    const scroll = drag.pageOutside ? target : geometry.top + (drag.rawTarget - drag.top) / drag.range * geometry.range
     // Toolbar/viewport changes rebase the finger origin without ending the drag.
-    Object.assign(drag, geometry, { scroll: target, target, x: drag.lastX, y: drag.lastY })
+    // Retain uncapped travel so reversing a long swipe still returns to its origin.
+    Object.assign(drag, geometry, { scroll, rawTarget: scroll, target, x: drag.lastX, y: drag.lastY })
   }
   const click = (event: MouseEvent): void => {
     if (event.detail !== 0 && performance.now() < suppressClickUntil) {
@@ -152,6 +180,13 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
   const release = (): void => { end(true) }
   const cancel = (): void => { end(); stopSettling() }
   const interrupt = (): void => { stopSettling(); committedScroll = null }
+  // Upstream images and fonts can move the gallery without a viewport resize.
+  const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+  observer?.observe(gallery)
+  observer?.observe(deck)
+  if (document.body) observer?.observe(document.body)
+  document.addEventListener('load', resize, true)
+  document.fonts?.addEventListener('loadingdone', resize)
   followPage()
   stage.addEventListener('touchstart', start, { passive: true })
   stage.addEventListener('touchmove', move, { passive: false })
@@ -167,6 +202,9 @@ export function bindWorkCardTouch(gallery: HTMLDivElement, stage: HTMLDivElement
     end()
     stopSettling()
     cancelScrollFrame()
+    observer?.disconnect()
+    document.removeEventListener('load', resize, true)
+    document.fonts?.removeEventListener('loadingdone', resize)
     stage.removeEventListener('touchstart', start)
     stage.removeEventListener('touchmove', move)
     stage.removeEventListener('touchend', release)
