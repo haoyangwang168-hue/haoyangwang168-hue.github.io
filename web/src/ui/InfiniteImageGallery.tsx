@@ -126,6 +126,8 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
           // Prepare one neighbour on each side before it enters, without loading all slots.
           const nearby = box.left < width * 1.6 && box.left + box.width > -width * 0.2
           if (!nearby) continue
+          // Position preloads too; no decoded image may appear at the default left origin.
+          button.style.transform = `translate3d(${box.left}px, 0, 0) scale(${box.width / baseWidth}, ${box.height / height})`
           const asset = images[box.index]
           button.dataset.imageIndex = String(box.index)
           button.setAttribute('aria-label', asset.alt)
@@ -133,15 +135,13 @@ export default function InfiniteImageGallery({ images, lang }: { images: WorkIma
           // Cover crops can render wider than their frame, especially landscape photos.
           const aspect = preview.width && preview.height ? preview.width / preview.height : 1
           loader?.assign({ src: preview.src, srcSet: preview.srcSet, alt: asset.alt, displayWidth: Math.max(box.width, box.height * aspect) })
-          if (!onscreen) continue
           const picture = loader?.image()
-          button.style.transform = `translate3d(${box.left}px, 0, 0) scale(${box.width / baseWidth}, ${box.height / height})`
           if (picture) {
             const aspect = picture.naturalWidth && picture.naturalHeight ? picture.naturalWidth / picture.naturalHeight : 1
             const scale = galleryImageScale(box.width, box.height, baseWidth, height, aspect)
             picture.style.transform = `scale(${scale.x}, ${scale.y})`
           }
-          if (box.left >= 0 && box.left + box.width <= width + 1) featured = box.index
+          if (onscreen && box.left >= 0 && box.left + box.width <= width + 1) featured = box.index
         }
         if (featured !== selectedRef.current) {
           selectedRef.current = featured

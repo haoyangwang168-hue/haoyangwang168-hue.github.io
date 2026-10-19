@@ -58,7 +58,8 @@ export function createGalleryImageSlot(button: HTMLButtonElement, notify: (image
         if (version !== generation || resolution !== candidate || source !== image.currentSrc) return
         state = 'ready'
         button.dataset.imageState = state
-        image.style.visibility = 'visible'
+        // A ready preload must remain hidden with its offscreen slot.
+        image.style.visibility = 'inherit'
         notify(image, state)
       } catch { failed(resolution, source) }
     }

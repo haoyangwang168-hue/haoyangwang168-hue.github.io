@@ -6,7 +6,7 @@ import { galleryFrames, gallerySlot } from '../src/ui/gallery-math.ts'
 function fixture() {
   const images = []
   const states = []
-  const button = { dataset: {}, prepend: image => { image.attached = true } }
+  const button = { dataset: {}, style: {}, prepend: image => { image.attached = true } }
   const create = () => {
     let resolve, reject
     const decoding = new Promise((yes, no) => { resolve = yes; reject = no })
@@ -44,7 +44,7 @@ test('image stays hidden until decode finishes, with no repeated request on redr
   assert.equal(f.button.dataset.imageState, 'loading')
   image.resolve()
   await loaded
-  assert.equal(image.style.visibility, 'visible')
+  assert.equal(image.style.visibility, 'inherit')
   assert.equal(f.button.dataset.imageState, 'ready')
 })
 
@@ -63,6 +63,24 @@ test('late completion cannot replace the next image or expose a previous photogr
   assert.equal(f.states.filter(s => s.state === 'ready').length, 0)
 })
 
+test('decoded preloads follow the slot visibility without exposing an offscreen image', async () => {
+  const f = fixture()
+  f.button.style.visibility = 'hidden'
+  f.slot.assign(asset('preload'))
+  const image = f.images[0]
+  const loaded = image.onload()
+  image.resolve()
+  await loaded
+  assert.equal(f.button.style.visibility, 'hidden')
+  assert.equal(image.style.visibility, 'inherit', 'explicit visible would override the hidden parent')
+  f.button.style.visibility = 'visible'
+  f.slot.assign(asset('preload'))
+  assert.equal(f.images.length, 1, 'entering the viewport keeps the decoded image')
+  assert.equal(image.style.visibility, 'inherit')
+  f.button.style.visibility = 'hidden'
+  assert.equal(image.style.visibility, 'inherit', 'leaving the viewport needs no new decode')
+})
+
 test('growing frames upgrade their responsive size without blanking or replacing decoded pixels', async () => {
   const f = fixture()
   f.slot.assign(asset('a'))
@@ -74,7 +92,7 @@ test('growing frames upgrade their responsive size without blanking or replacing
   f.slot.assign({ ...asset('a'), displayWidth: 700 })
   assert.equal(f.images.length, 1)
   assert.equal(picture.sizes, '704px')
-  assert.equal(picture.style.visibility, 'visible')
+  assert.equal(picture.style.visibility, 'inherit')
   assert.equal(f.button.dataset.imageState, 'ready')
   f.slot.assign(asset('a'))
   assert.equal(picture.sizes, '704px', 'backward movement keeps the already downloaded resolution')
@@ -109,7 +127,7 @@ test('a size change that keeps the same candidate does not invalidate its only l
   f.slot.assign({ ...asset('a'), displayWidth: 350 })
   picture.resolve()
   await loaded
-  assert.equal(picture.style.visibility, 'visible')
+  assert.equal(picture.style.visibility, 'inherit')
   assert.equal(f.button.dataset.imageState, 'ready')
 })
 
