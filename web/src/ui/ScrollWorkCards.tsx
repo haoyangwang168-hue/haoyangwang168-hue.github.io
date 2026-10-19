@@ -4,10 +4,11 @@ import { SECTION_COVERS, type WorkSection, type WorkListItem, type WorksLang } f
 import { responsiveImage } from '../data/responsiveImage'
 import { useIsCompact, useMobileInput, usePrefersReducedMotion } from './useParallax'
 import { workOutroPose, workTimeline } from './work-outro'
-import { workCardPose, workCardSurfaceRotation } from './portrait-math'
+import { workCardPose, workCardFlipScale } from './portrait-math'
 import { worksPageParallax } from './works-transition'
 import ProfileCard from './ProfileCard'
 import { useWorkCardTouch } from './useWorkCardTouch'
+import { useViewportActivity } from './useViewportActivity'
 import './scroll-work-cards.css'
 
 function Card({ section, index, count, progress, data, onOpen, reduced, mobile }: { section: WorkSection; index: number; count: number; progress: MotionValue<number>; data: WorksLang; onOpen: (item: WorkListItem) => void; reduced: boolean; mobile: boolean }) {
@@ -52,7 +53,9 @@ function Card({ section, index, count, progress, data, onOpen, reduced, mobile }
   }, [pose, reduced, index, mobile])
   const y = useTransform(pose, value => `${value.y}%`)
   const rotate = useTransform(pose, value => value.rotate)
-  const rotateY = useTransform(pose, value => workCardSurfaceRotation(value.rotateY, mobile))
+  const rotateY = useTransform(pose, value => value.rotateY)
+  const scaleX = useTransform(pose, value => workCardFlipScale(value.rotateY))
+  const visibility = useTransform(pose, value => value.opacity > 0 && (index === 0 || value.rotateY >= 90) ? 'visible' as const : 'hidden' as const)
   // Schedule the face swap with the transform, instead of mutating it ahead of paint.
   const frontVisibility = useTransform(pose, value => value.rotateY < 90 ? 'visible' as const : 'hidden' as const)
   const backVisibility = useTransform(pose, value => reduced || (value.rotateY >= 90 && value.opacity > 0) ? 'visible' as const : 'hidden' as const)
@@ -62,7 +65,7 @@ function Card({ section, index, count, progress, data, onOpen, reduced, mobile }
   return <motion.article ref={cardRef} className={`scroll-work-card scroll-work-card--${index % 4}`} data-work-card={index} onClick={event => {
     // Keep individual project buttons independent from the whole-card hit area.
     if (!(event.target as Element).closest('button') && items[0]) onOpen(items[0])
-  }} style={reduced ? {} : { y, rotate, rotateY, opacity, pointerEvents, zIndex: count - index }}>
+  }} style={reduced ? {} : { y, rotate, ...(mobile ? { scaleX, visibility } : { rotateY }), opacity, pointerEvents, zIndex: count - index }}>
     {index === 0 && !reduced && <motion.div ref={frontRef} className="scroll-work-side" style={{ visibility: mobile ? frontVisibility : 'visible' }}>
       <ProfileCard className="scroll-work-profile"><div className="scroll-work-face scroll-work-front">
       <span className="scroll-work-eyebrow">SELECTED WORKS / 2026</span>
@@ -102,6 +105,7 @@ export default function ScrollWorkCards({ data, lang, onOpen, entryProgress }: {
   const reduced = usePrefersReducedMotion()
   const compact = useIsCompact()
   const mobile = useMobileInput()
+  useViewportActivity(stageRef)
   const entryY = useTransform(entryProgress, p => worksPageParallax(p, compact, reduced).incomingY)
   const deckY = useTransform(entryProgress, p => worksPageParallax(p, compact, reduced).deckY)
   const { scrollYProgress } = useScroll({ target: galleryRef, offset: ['start start', 'end end'] })

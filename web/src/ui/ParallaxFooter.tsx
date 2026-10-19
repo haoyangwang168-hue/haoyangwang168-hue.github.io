@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from 'framer-motion'
+import { useCallback, useRef, useState } from 'react'
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { usePrefersReducedMotion } from './useParallax'
 import { footerPose } from './footer-motion'
 import ContactDialog from './ContactDialog'
+import { useViewportActivity } from './useViewportActivity'
 import './parallax-footer.css'
 
 interface ParallaxFooterProps { lang: 'en' | 'zh' }
@@ -26,49 +27,40 @@ export default function ParallaxFooter({ lang }: ParallaxFooterProps) {
   const [contactOpen, setContactOpen] = useState(false)
   const closeContact = useCallback(() => setContactOpen(false), [])
   const stage = useRef<HTMLElement>(null)
-  const front = useRef<SVGGElement>(null)
-  const letter = useRef<SVGGElement>(null)
+  const sticky = useRef<HTMLDivElement>(null)
+  useViewportActivity(sticky)
   const reduced = usePrefersReducedMotion()
   const copy = COPY[lang]
   const { scrollYProgress } = useScroll({ target: stage, offset: ['start start', 'end end'] })
   // Native scroll drives every layer without a delayed spring tail.
   const progress = scrollYProgress
   const morphProgress = useTransform(scrollYProgress, p => reduced ? 1 : footerPose(p).morph)
-  const letterTransform = useTransform(() => {
-    const value = morphProgress.get()
-    const morph = reduced ? 1 : value
-    const pose = footerPose(progress.get(), 5)
-    const scale = reduced ? 1.3 : pose.scale + (1.3 - pose.scale) * morph
-    return `translate(450 ${200 + pose.y + morph * 145}) rotate(${morph * 90}) scale(${scale}) translate(-450 -200)`
-  })
-  const frontTransform = useTransform(progress, (p) => {
-    const pose = footerPose(reduced ? 1 : p, 5)
-    return `translate(450 ${200 + pose.y}) scale(${pose.scale}) translate(-450 -200)`
-  })
-  useMotionValueEvent(letterTransform, 'change', (value) => letter.current?.setAttribute('transform', value))
-  useMotionValueEvent(frontTransform, 'change', (value) => front.current?.setAttribute('transform', value))
-  useEffect(() => {
-    letter.current?.setAttribute('transform', letterTransform.get())
-    front.current?.setAttribute('transform', frontTransform.get())
-  }, [reduced, letterTransform, frontTransform])
+  const frontPose = useTransform(progress, p => footerPose(reduced ? 1 : p, 5))
+  const frontY = useTransform(frontPose, pose => `${pose.y / 440 * 100}%`)
+  const frontScale = useTransform(frontPose, pose => pose.scale)
+  // Move cached HTML surfaces. SVG transform attributes repaint the paths during every scroll frame.
+  const letterY = useTransform(() => `${(frontPose.get().y + morphProgress.get() * 145) / 440 * 100}%`)
+  const letterRotate = useTransform(morphProgress, p => p * 90)
+  const letterScale = useTransform(() => frontPose.get().scale + (1.3 - frontPose.get().scale) * morphProgress.get())
   const labelOpacity = useTransform(morphProgress, [0.85, 1], [0, 1])
   // Widen only the I stem during the morph; the final contact hit area stays generous.
   const letterWidth = useTransform(morphProgress, p => 16 + 24 * (reduced ? 1 : p))
   const letterX = useTransform(letterWidth, width => 450 - width / 2)
   const serifOpacity = useTransform(morphProgress, p => reduced ? 0 : 1 - p)
-  const mobileStroke = useTransform(morphProgress, (p) => `${(reduced ? 1 : p) * 40}px`)
+  const mobileStroke = useTransform(morphProgress, p => `${p * 40}px`)
   return (
     <footer className={`parallax-footer${reduced ? ' pf-reduced' : ''}`} ref={stage} lang={lang} aria-labelledby="footer-invitation">
-      <div className="pf-sticky">
+      <div className="pf-sticky" ref={sticky}>
         <div className="pf-topline"><p>{copy.chapter}</p><span>GUANGZHOU, CN</span></div>
         <div className="pf-invitation"><h2 id="footer-invitation">{copy.headline.map((line) => <span key={line}>{line}</span>)}</h2><div className="pf-contact"><p>{copy.contact}</p><a href="tel:+8619120353235" aria-label={`${copy.phone} · 191 2035 3235`}>191 2035 3235 ↗</a></div></div>
-        <motion.div className="pf-build" style={{ '--pf-button-stroke': mobileStroke } as import('framer-motion').MotionStyle}><div className="pf-build-artwork">{[0, 1, 2, 3, 4].map((index) => <EchoLayer key={index} index={index} progress={progress} reduced={reduced} />)}<svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
-          <g aria-hidden="true"><g ref={front} transform={frontTransform.get()} className="pf-build-front"><path d={BUILD_PATH} fillRule="evenodd" /></g></g>
-          <motion.a href="#contact-info" onClick={event => { event.preventDefault(); setContactOpen(true) }} aria-label={lang === 'zh' ? '打开联系方式' : 'Open contact details'} aria-haspopup="dialog" className="pf-morph-link">
-            <g ref={letter} transform={letterTransform.get()}><motion.path d={I_SERIFS} style={{ opacity: serifOpacity }} /><motion.rect x={letterX} y="100" width={letterWidth} height="200" /></g>
-            <motion.text x="450" y="371" textAnchor="middle" dominantBaseline="middle" style={{ opacity: reduced ? 1 : labelOpacity }} aria-hidden="true">{copy.button}</motion.text>
-          </motion.a>
-        </svg></div></motion.div>
+        <div className="pf-build"><div className="pf-build-artwork">
+          {[0, 1, 2, 3, 4].map(index => <EchoLayer key={index} index={index} progress={progress} reduced={reduced} />)}
+          <motion.div className="pf-art-layer" aria-hidden="true" style={{ y: frontY, scale: frontScale }}><svg viewBox="0 0 900 440"><path className="pf-build-front" d={BUILD_PATH} fillRule="evenodd" /></svg></motion.div>
+          <a href="#contact-info" onClick={event => { event.preventDefault(); setContactOpen(true) }} aria-label={lang === 'zh' ? '打开联系方式' : 'Open contact details'} aria-haspopup="dialog" className="pf-morph-link">
+            <motion.span className="pf-art-layer pf-letter-layer" style={{ y: letterY, rotate: letterRotate, scale: letterScale }}><svg viewBox="0 0 900 440" aria-hidden="true"><motion.path d={I_SERIFS} style={{ opacity: serifOpacity }} /><motion.rect x={letterX} y="100" width={letterWidth} height="200" style={{ '--pf-button-stroke': mobileStroke } as import('framer-motion').MotionStyle} /></svg></motion.span>
+            <svg className="pf-button-label" viewBox="0 0 900 440" aria-hidden="true"><motion.text x="450" y="371" textAnchor="middle" dominantBaseline="middle" style={{ opacity: reduced ? 1 : labelOpacity }}>{copy.button}</motion.text></svg>
+          </a>
+        </div></div>
         <div className="pf-bottomline"><span>© {new Date().getFullYear()} HAOYANG WANG<br />{copy.note}</span><button type="button" className="pf-back" onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' })}>{copy.back} ↑</button></div>
       </div>
       {contactOpen && <ContactDialog lang={lang} onClose={closeContact} />}

@@ -137,7 +137,9 @@ export default function App() {
   })
   // Share a short, overdamped response between the background and both page layers.
   const smoothPaperProgress = useSpring(rawPaperProgress, { stiffness: 300, damping: 32, mass: 0.45, restDelta: 0.00001, restSpeed: 0.00001 })
-  const paperProgress = useTransform(() => Math.max(0, Math.min(1, reduced ? rawPaperProgress.get() : smoothPaperProgress.get())))
+  const paperProgress = useTransform(() => Math.max(0, Math.min(1, reduced || mobile ? rawPaperProgress.get() : smoothPaperProgress.get())))
+  // Stop compositing the covered canvas and its fixed overlays as well as its frame loop.
+  const backgroundVisibility = useTransform(paperProgress, p => p >= 1 ? 'hidden' as const : 'visible' as const)
   const fogBg = useTransform(
     worksProgress,
     [0, 1],
@@ -157,6 +159,7 @@ export default function App() {
       <div {...(!introComplete ? { inert: '' } : {})}>
 
       {/* 固定的 3D 背景 */}
+      <motion.div style={{ visibility: backgroundVisibility }} data-scene-layers>
       <div className="scene-bg">
         {sceneFailed ? (
           <div className="scene-fallback">
@@ -202,6 +205,7 @@ export default function App() {
 
       {/* 固定磨砂右轨（进入履历区淡入） */}
       <motion.div className="glass-rail" style={{ opacity: railOpacity }} aria-hidden="true" />
+      </motion.div>
 
       <DissolveTransition mode="paper" containerRef={worksRef} progress={paperProgress} enabled={paperDissolveEnabled} onUnavailable={onPaperDissolveUnavailable} />
 

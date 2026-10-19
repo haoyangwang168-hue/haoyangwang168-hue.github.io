@@ -11,10 +11,16 @@
 .scroll-work-card--3 { --card-color: #dedbd1; --card-ink: #34362f; }
 .scroll-work-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding: 24px; border-radius: inherit; background: var(--card-color); color: var(--card-ink); backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 14px #2222220c; }
 .scroll-work-back { transform: rotateY(180deg); }
-/* Prepare the rotating surface before a touch drag, without promoting each child. */
+/* Phone flips use one flat surface; perspective and hidden backfaces create extra layers in WebKit. */
+.scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-stage { overflow: hidden; contain: layout paint; }
+.scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-deck { perspective: none; }
 .scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-card { will-change: transform; transform-style: flat; }
+.scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-side,
+.scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-face { backface-visibility: visible; -webkit-backface-visibility: visible; }
 .scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-back { transform: none; }
 .scroll-work-gallery[data-mobile-timeline="true"] .scroll-work-face { box-shadow: none; }
+.scroll-work-gallery:not(.scroll-work-gallery--still) .scroll-work-stage { content-visibility: auto; }
+.scroll-work-stage[data-viewport-active="false"] .scroll-work-card { will-change: auto; }
 .scroll-work-eyebrow { font: 500 11px/1.4 var(--font-reading); letter-spacing: .08em; }
 .scroll-work-face h3 { font: 900 clamp(24px, 2.6vw, 32px)/1.2 Arial, var(--font-reading); text-align: center; margin: 12px 0; letter-spacing: -.025em; text-wrap: balance; }
 .scroll-work-face p { text-align: center; font: 400 13px/1.65 var(--font-reading); margin: 10px 0; text-wrap: pretty; }
